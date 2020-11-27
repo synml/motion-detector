@@ -33,26 +33,23 @@ class ShowVideo(QtCore.QObject):
 
         self.threshhold = 0
         self.globalFrameCount = 7
-        self.frameCount = self.globalFrameCount  #
+        self.frameCount = self.globalFrameCount
         self.total_frame = 0
         self.cycle = 0
         self.tempCycle = 0
         self.captureMode = False
         self.captureCount = 0
-        self.motionCount = 0  #
+        self.motionCount = 0
 
     @QtCore.pyqtSlot()
     def startVideo(self):
         global image
 
-        run_video = True
-        while run_video:
-
+        while True:
             if self.first_frame is True:
                 ret, frame = self.camera.read()
 
                 def onMouse(event, x, y, flags, param):
-
                     if event == cv2.EVENT_LBUTTONDOWN:
                         self.drag = True
                         self.default_x = x
