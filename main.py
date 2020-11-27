@@ -9,7 +9,6 @@ import time
 error_index = []
 subtract_frame_error = []
 subtract_frame_percent_error = []
-
 globalCount = 0
 
 
@@ -50,7 +49,6 @@ class ShowVideo(QtCore.QObject):
         while run_video:
 
             if self.first_frame is True:
-
                 ret, frame = self.camera.read()
 
                 def onMouse(event, x, y, flags, param):
@@ -86,10 +84,7 @@ class ShowVideo(QtCore.QObject):
                 cv2.destroyAllWindows()
                 self.first_frame = False
 
-
-
             else:
-
                 global globalCount
                 ret, image = self.camera.read()
 
@@ -207,11 +202,10 @@ if __name__ == '__main__':
 
     vertical_layout.addLayout(horizontal_layout)
     vertical_layout.addWidget(push_button1)
-    #
-    #
+
     layout_widget = QtWidgets.QWidget()
     layout_widget.setLayout(vertical_layout)
-    #
+
     main_window = QtWidgets.QMainWindow()
     main_window.setCentralWidget(layout_widget)
     main_window.show()
