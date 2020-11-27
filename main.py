@@ -116,11 +116,10 @@ class ShowVideo(QtCore.QObject):
 
                 # 이전 오차값과 현재 오차값이 +-5퍼센트 이상이면 이상감지
                 buff_error = subtract_frame
-                #
-                bbBoxFrame = frame.copy()
-                output_frame = cv2.rectangle(bbBoxFrame, (self.default_x, self.default_y),
-                                            (self.default_x + self.w, self.default_y + self.h), (0, 255, 0),
-                                            thickness=3)
+                bounding_box_frame = frame.copy()
+                output_frame = cv2.rectangle(bounding_box_frame, (self.default_x, self.default_y),
+                                             (self.default_x + self.w, self.default_y + self.h), (0, 255, 0),
+                                             thickness=3)
                 qt_image1 = QtGui.QImage(output_frame.data,
                                          self.width,
                                          self.height,
