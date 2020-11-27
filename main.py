@@ -96,10 +96,10 @@ class ShowVideo(QtCore.QObject):
                 if self.buffer_Frame is None:
                     self.buffer_Frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
 
-                roi_Frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
-                buffer_Frame_norm = 1 / (1 + np.exp(self.buffer_Frame))  # SIGMOID
-                roi_Frame_norm = 1 / (1 + np.exp(roi_Frame))  # SIGMOID
-                subtract_frame = np.sqrt(np.sum((buffer_Frame_norm - roi_Frame_norm) ** 2))  # L2 DISTANCE
+                roi_frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
+                buffer_frame_norm = 1 / (1 + np.exp(self.buffer_Frame))  # SIGMOID
+                roi_frame_norm = 1 / (1 + np.exp(roi_frame))  # SIGMOID
+                subtract_frame = np.sqrt(np.sum((buffer_frame_norm - roi_frame_norm) ** 2))  # L2 DISTANCE
 
                 if self.total_frame == 1:
                     buff_error = subtract_frame
@@ -107,7 +107,7 @@ class ShowVideo(QtCore.QObject):
                 # cv2.imshow('roi', self.buffer_Frame)
                 if subtract_frame > buff_error * 1.3:
 
-                    self.buffer_Frame = roi_Frame
+                    self.buffer_Frame = roi_frame
 
                     # 텍스트 브라우저 로그 남기기
                     now = time.localtime()
@@ -115,28 +115,28 @@ class ShowVideo(QtCore.QObject):
                         now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
 
                 else:
-                    self.buffer_Frame = roi_Frame
+                    self.buffer_Frame = roi_frame
 
                 # 이전 오차값과 현재 오차값이 +-5퍼센트 이상이면 이상감지
                 buff_error = subtract_frame
                 #
                 bbBoxFrame = frame.copy()
-                outputFrame = cv2.rectangle(bbBoxFrame, (self.default_x, self.default_y),
+                output_frame = cv2.rectangle(bbBoxFrame, (self.default_x, self.default_y),
                                             (self.default_x + self.w, self.default_y + self.h), (0, 255, 0),
                                             thickness=3)
-                qt_image1 = QtGui.QImage(outputFrame.data,
+                qt_image1 = QtGui.QImage(output_frame.data,
                                          self.width,
                                          self.height,
-                                         outputFrame.strides[0],
+                                         output_frame.strides[0],
                                          QtGui.QImage.Format_Grayscale8)
 
-                h, w = roi_Frame.shape
-                roiFrameCvtMat = cv2.resize(roi_Frame, (h, w))
+                h, w = roi_frame.shape
+                roi_frame_cvt_mat = cv2.resize(roi_frame, (h, w))
 
-                qt_image2 = QtGui.QImage(roiFrameCvtMat.data,
+                qt_image2 = QtGui.QImage(roi_frame_cvt_mat.data,
                                          h,
                                          w,
-                                         roiFrameCvtMat.strides[0],
+                                         roi_frame_cvt_mat.strides[0],
                                          QtGui.QImage.Format_Grayscale8)
 
                 self.VideoSignal1.emit(qt_image1)
@@ -145,7 +145,7 @@ class ShowVideo(QtCore.QObject):
                 globalCount += 1
 
             loop = QtCore.QEventLoop()
-            QtCore.QTimer.singleShot(500, loop.quit)  #
+            QtCore.QTimer.singleShot(500, loop.quit)
             loop.exec_()
 
 
