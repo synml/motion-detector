@@ -7,17 +7,14 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 
 
 class ShowVideo(QtCore.QObject):
-    camera = cv2.VideoCapture(0)
-
-    ret, image = camera.read()
-    height, width = image.shape[:2]
-
     VideoSignal1 = QtCore.pyqtSignal(QtGui.QImage)
     VideoSignal2 = QtCore.pyqtSignal(QtGui.QImage)
 
     def __init__(self, parent=None):
         super(ShowVideo, self).__init__(parent)
-        self.drag = False
+        self.camera = cv2.VideoCapture(0)
+        self.height, self.width, _ = self.camera.read()[1].shape
+
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
         self.blue, self.yellow = (255, 0, 0), (0, 255, 255)
         self.buffer_frame = None
@@ -30,27 +27,21 @@ class ShowVideo(QtCore.QObject):
 
         def onMouse(event, x, y, flags, param):
             if event == cv2.EVENT_LBUTTONDOWN:
-                self.drag = True
                 self.default_x = x
                 self.default_y = y
 
             elif event == cv2.EVENT_LBUTTONUP:
-                if self.drag:
-                    drag = False
-                    self.w = x - self.default_x
-                    self.h = y - self.default_y
+                self.w = x - self.default_x
+                self.h = y - self.default_y
 
-                    if self.w > 0 and self.h > 0:
-                        img_draw = frame.copy()
-                        cv2.rectangle(img_draw, (self.default_x, self.default_y), (x, y), self.yellow, 2)
-                        cv2.imshow('video', img_draw)
+                if self.w > 0 and self.h > 0:
+                    img_draw = frame.copy()
+                    cv2.rectangle(img_draw, (self.default_x, self.default_y), (x, y), self.yellow, 2)
+                    cv2.imshow('video', img_draw)
 
-                        roi_cols = self.default_y + self.h
-                        roi_rows = self.default_x + self.w
-
-                        # roi = frame[self.default_y:roi_cols, self.default_x:roi_rows]
-                        # threshhold = np.shape(np.ravel(roi))[0]
-                    print(self.default_x, self.default_y, self.w, self.h)
+                    # roi = frame[self.default_y:roi_cols, self.default_x:roi_rows]
+                    # threshhold = np.shape(np.ravel(roi))[0]
+                print(self.default_x, self.default_y, self.w, self.h)
 
         # shape[0] = 높이 , shape[1] = 너비
         cv2.startWindowThread()
