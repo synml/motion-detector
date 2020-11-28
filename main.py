@@ -17,19 +17,16 @@ class ShowVideo(QtCore.QObject):
 
     def __init__(self, parent=None):
         super(ShowVideo, self).__init__(parent)
-
-        # main logic variable
         self.drag = False
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
         self.blue, self.yellow = (255, 0, 0), (0, 255, 255)
         self.first_frame = True
-        self.buffer_Frame = None
+        self.buffer_frame = None
         self.motion_count = 0
         self.total_frame = 0
 
     @QtCore.pyqtSlot()
     def startVideo(self):
-        global image
 
         while True:
             if self.first_frame is True:
@@ -75,11 +72,11 @@ class ShowVideo(QtCore.QObject):
                 roi_cols = self.default_y + self.h
                 roi_rows = self.default_x + self.w
                 frame = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                if self.buffer_Frame is None:
-                    self.buffer_Frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
+                if self.buffer_frame is None:
+                    self.buffer_frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
 
                 roi_frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
-                buffer_frame_norm = 1 / (1 + np.exp(self.buffer_Frame))  # SIGMOID
+                buffer_frame_norm = 1 / (1 + np.exp(self.buffer_frame))  # SIGMOID
                 roi_frame_norm = 1 / (1 + np.exp(roi_frame))  # SIGMOID
                 subtract_frame = np.sqrt(np.sum((buffer_frame_norm - roi_frame_norm) ** 2))  # L2 DISTANCE
 
@@ -89,16 +86,16 @@ class ShowVideo(QtCore.QObject):
                 # cv2.imshow('roi', self.buffer_Frame)
                 if subtract_frame > buff_error * 1.3:
 
-                    self.buffer_Frame = roi_frame
+                    self.buffer_frame = roi_frame
 
-                    # 텍스트 브라우저 로그 남기기
+                    # textBrowser에 로그 기록
                     now = time.strftime('%y%m%d_%H%M%S', time.localtime(time.time()))
                     textBrowser.append(now + ', count=' + str(self.motion_count))
 
                 else:
-                    self.buffer_Frame = roi_frame
+                    self.buffer_frame = roi_frame
 
-                # 이전 오차값과 현재 오차값이 +-5퍼센트 이상이면 이상감지
+                # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
                 buff_error = subtract_frame
                 bounding_box_frame = frame.copy()
                 output_frame = cv2.rectangle(bounding_box_frame, (self.default_x, self.default_y),
