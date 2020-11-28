@@ -107,9 +107,8 @@ class ShowVideo(QtCore.QObject):
                     self.buffer_Frame = roi_frame
 
                     # 텍스트 브라우저 로그 남기기
-                    now = time.localtime()
-                    textBrowser.append(str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) + "일" + str(
-                        now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
+                    now = time.strftime('%y%m%d_%H%M%S', time.localtime(time.time()))
+                    textBrowser.append(now + ', count=' + str(global_count))
 
                 else:
                     self.buffer_Frame = roi_frame
