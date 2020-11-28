@@ -1,10 +1,9 @@
-import cv2
 import sys
-import numpy as np
-from PyQt5 import QtCore
-from PyQt5 import QtWidgets
-from PyQt5 import QtGui
 import time
+
+import cv2
+import numpy as np
+from PyQt5 import QtCore, QtWidgets, QtGui
 
 
 class ShowVideo(QtCore.QObject):
