@@ -6,11 +6,6 @@ from PyQt5 import QtWidgets
 from PyQt5 import QtGui
 import time
 
-error_index = []
-subtract_frame_error = []
-subtract_frame_percent_error = []
-globalCount = 0
-
 
 class ShowVideo(QtCore.QObject):
     camera = cv2.VideoCapture(0)
@@ -30,16 +25,8 @@ class ShowVideo(QtCore.QObject):
         self.blue, self.yellow = (255, 0, 0), (0, 255, 255)
         self.first_frame = True
         self.buffer_Frame = None
-
-        self.threshhold = 0
-        self.globalFrameCount = 7
-        self.frameCount = self.globalFrameCount
+        self.motion_count = 0
         self.total_frame = 0
-        self.cycle = 0
-        self.tempCycle = 0
-        self.captureMode = False
-        self.captureCount = 0
-        self.motionCount = 0
 
     @QtCore.pyqtSlot()
     def startVideo(self):
@@ -82,7 +69,6 @@ class ShowVideo(QtCore.QObject):
                 self.first_frame = False
 
             else:
-                global globalCount
                 ret, image = self.camera.read()
 
                 # 처리 로직
@@ -108,7 +94,7 @@ class ShowVideo(QtCore.QObject):
 
                     # 텍스트 브라우저 로그 남기기
                     now = time.strftime('%y%m%d_%H%M%S', time.localtime(time.time()))
-                    textBrowser.append(now + ', count=' + str(global_count))
+                    textBrowser.append(now + ', count=' + str(self.motion_count))
 
                 else:
                     self.buffer_Frame = roi_frame
@@ -137,10 +123,10 @@ class ShowVideo(QtCore.QObject):
                 self.VideoSignal1.emit(qt_image1)
                 self.VideoSignal2.emit(qt_image2)
 
-                globalCount += 1
+                self.motion_count += 1
 
             loop = QtCore.QEventLoop()
-            QtCore.QTimer.singleShot(500, loop.quit)
+            QtCore.QTimer.singleShot(33, loop.quit)
             loop.exec_()
 
 
