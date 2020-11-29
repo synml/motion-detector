@@ -152,18 +152,15 @@ if __name__ == '__main__':
     vid.VideoSignal1.connect(image_viewer1.setImage)
     vid.VideoSignal2.connect(image_viewer2.setImage)
 
-    push_button1 = QtWidgets.QPushButton('Start')
-
-    push_button1.clicked.connect(vid.startVideo)
-
-    vertical_layout = QtWidgets.QVBoxLayout()
+    textBrowser = QtWidgets.QTextBrowser()
     horizontal_layout = QtWidgets.QHBoxLayout()
-
     horizontal_layout.addWidget(image_viewer1)
     horizontal_layout.addWidget(image_viewer2)
-    textBrowser = QtWidgets.QTextBrowser()
     horizontal_layout.addWidget(textBrowser)
 
+    push_button1 = QtWidgets.QPushButton('Start')
+    push_button1.clicked.connect(vid.startVideo)
+    vertical_layout = QtWidgets.QVBoxLayout()
     vertical_layout.addLayout(horizontal_layout)
     vertical_layout.addWidget(push_button1)
 
