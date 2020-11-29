@@ -16,37 +16,38 @@ class ShowVideo(QtCore.QObject):
         self.height, self.width, _ = self.camera.read()[1].shape
 
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
-        self.blue, self.yellow = (255, 0, 0), (0, 255, 255)
+        self.blue = (255, 0, 0)
+        self.yellow = (0, 255, 255)
         self.buffer_frame = None
         self.motion_count = 0
         self.total_frame = 0
+
+    def onMouse(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.default_x = x
+            self.default_y = y
+
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.w = x - self.default_x
+            self.h = y - self.default_y
+
+            if self.w > 0 and self.h > 0:
+                img_draw = param.copy()
+                cv2.rectangle(img_draw, (self.default_x, self.default_y), (x, y), self.yellow, 2)
+                cv2.imshow('video', img_draw)
+
+                # roi = frame[self.default_y:roi_cols, self.default_x:roi_rows]
+                # threshhold = np.shape(np.ravel(roi))[0]
+            print(self.default_x, self.default_y, self.w, self.h)
 
     @QtCore.pyqtSlot()
     def startVideo(self):
         ret, frame = self.camera.read()
 
-        def onMouse(event, x, y, flags, param):
-            if event == cv2.EVENT_LBUTTONDOWN:
-                self.default_x = x
-                self.default_y = y
-
-            elif event == cv2.EVENT_LBUTTONUP:
-                self.w = x - self.default_x
-                self.h = y - self.default_y
-
-                if self.w > 0 and self.h > 0:
-                    img_draw = frame.copy()
-                    cv2.rectangle(img_draw, (self.default_x, self.default_y), (x, y), self.yellow, 2)
-                    cv2.imshow('video', img_draw)
-
-                    # roi = frame[self.default_y:roi_cols, self.default_x:roi_rows]
-                    # threshhold = np.shape(np.ravel(roi))[0]
-                print(self.default_x, self.default_y, self.w, self.h)
-
         # shape[0] = 높이 , shape[1] = 너비
         cv2.startWindowThread()
         cv2.imshow('video', frame)
-        cv2.setMouseCallback("video", onMouse, param=frame)
+        cv2.setMouseCallback("video", self.onMouse, param=frame)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
@@ -172,4 +173,4 @@ if __name__ == '__main__':
     main_window = QtWidgets.QMainWindow()
     main_window.setCentralWidget(layout_widget)
     main_window.show()
-    sys.exit(app.exec_())
+    app.exec_()
