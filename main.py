@@ -63,8 +63,8 @@ class ShowVideo(QtCore.QObject):
                 self.buffer_frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
 
             roi_frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
-            buffer_frame_norm = 1 / (1 + np.exp(self.buffer_frame))  # SIGMOID
-            roi_frame_norm = 1 / (1 + np.exp(roi_frame))  # SIGMOID
+            buffer_frame_norm = 1 / (1 + np.exp(-self.buffer_frame, dtype=np.float64))  # SIGMOID
+            roi_frame_norm = 1 / (1 + np.exp(-roi_frame, dtype=np.float64))  # SIGMOID
             subtract_frame = np.sqrt(np.sum((buffer_frame_norm - roi_frame_norm) ** 2))  # L2 DISTANCE
 
             if self.total_frame == 1:
