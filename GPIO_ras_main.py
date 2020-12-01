@@ -15,6 +15,9 @@ globalCount = 0
 
 # 프레임 연산 처리 간격
 loopTime = 500
+#GPIO.setmode(GPIO.BOARD)
+#GPIO.setup(17, GPIO.OUT)
+
 
 class ShowVideo(QtCore.QObject):
 
@@ -51,8 +54,7 @@ class ShowVideo(QtCore.QObject):
     def startVideo(self):
         # 메인로직 시작 시 시작버튼 숨기기
 
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(17, GPIO.OUT)
+
 
 
         now = time.localtime()
@@ -138,7 +140,7 @@ class ShowVideo(QtCore.QObject):
 
                 print(subtract_frame)
                 if subtract_frame > buff_error*1.7:
-                    GPIO.output(17, GPIO.HIGH)
+                    #GPIO.output(17, GPIO.HIGH)
                     self.buffer_Frame = roi_Frame
 
                     # 텍스트 브라우저 로그 남기기
@@ -146,7 +148,7 @@ class ShowVideo(QtCore.QObject):
                     textBrowser.append("이상 감지 : " + str(now.tm_year)+"년" + str(now.tm_mon)+"월" + str(now.tm_mday)+"일" + str(now.tm_hour)+"시" + str(now.tm_min)+"분" + str(now.tm_sec)+"초")
 
                 else:
-                    GPIO.output(17, GPIO.LOW)
+                    #GPIO.output(17, GPIO.LOW)
                     self.buffer_Frame = roi_Frame
 
                 # 이전 오차값과 현재 오차값이 +-5퍼센트 이상이면 이상감지
