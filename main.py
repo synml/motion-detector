@@ -5,6 +5,9 @@ import cv2
 import numpy as np
 from PyQt5 import QtCore, QtWidgets, QtGui
 
+import pygame
+pygame.mixer.init()
+pygame.mixer.music.load("res/alert.mp3")
 
 raspMode = False
 if raspMode:
@@ -88,6 +91,7 @@ class ShowVideo(QtCore.QObject):
             print(subtract_frame)
             if subtract_frame > buff_error * 1.7:
                 # GPIO.output(17, GPIO.HIGH)
+                pygame.mixer.music.play()
                 self.buffer_frame = roi_frame
 
                 # textBrowser에 로그 기록
