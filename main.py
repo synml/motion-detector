@@ -9,10 +9,9 @@ import pygame
 pygame.mixer.init()
 pygame.mixer.music.load("res/alert.mp3")
 
-raspMode = False
-if raspMode:
+rasp = False
+if rasp:
     import RPi.GPIO as GPIO
-
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup(17, GPIO.OUT)
 
@@ -23,7 +22,7 @@ class ShowVideo(QtCore.QObject):
 
     def __init__(self, parent=None):
         super(ShowVideo, self).__init__(parent)
-        self.camera = cv2.VideoCapture(1)
+        self.camera = cv2.VideoCapture(0)
         self.height, self.width, _ = self.camera.read()[1].shape
 
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
@@ -90,7 +89,8 @@ class ShowVideo(QtCore.QObject):
             # cv2.imshow('roi', self.buffer_Frame)
             print(subtract_frame)
             if subtract_frame > buff_error * 1.7:
-                # GPIO.output(17, GPIO.HIGH)
+                if rasp:
+                    GPIO.output(17, GPIO.HIGH)
                 pygame.mixer.music.play()
                 self.buffer_frame = roi_frame
 
@@ -99,6 +99,8 @@ class ShowVideo(QtCore.QObject):
                 textBrowser.append("이상 감지: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
                                    "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
             else:
+                if rasp:
+                    GPIO.output(17, GPIO.LOW)
                 self.buffer_frame = roi_frame
 
             # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
@@ -132,7 +134,8 @@ class ShowVideo(QtCore.QObject):
             loop.exec_()
 
     def quit(self):
-        # GPIO.cleanup()
+        if rasp:
+            GPIO.cleanup()
         app.quit()
 
 
