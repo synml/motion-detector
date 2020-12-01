@@ -12,7 +12,7 @@ class ShowVideo(QtCore.QObject):
 
     def __init__(self, parent=None):
         super(ShowVideo, self).__init__(parent)
-        self.camera = cv2.VideoCapture(0)
+        self.camera = cv2.VideoCapture(1)
         self.height, self.width, _ = self.camera.read()[1].shape
 
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
@@ -42,6 +42,13 @@ class ShowVideo(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def startVideo(self):
+        now = time.localtime()
+        start_button.hide()
+        textBrowser.append("Start Time : " +
+                           str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) + "일" + str(
+            now.tm_hour) + "시" + str(
+            now.tm_min) + "분" + str(now.tm_sec) + "초")
+
         ret, frame = self.camera.read()
 
         # shape[0] = 높이 , shape[1] = 너비
@@ -71,13 +78,16 @@ class ShowVideo(QtCore.QObject):
                 buff_error = subtract_frame
 
             # cv2.imshow('roi', self.buffer_Frame)
-            if subtract_frame > buff_error * 1.3:
-
+            print(subtract_frame)
+            if subtract_frame > buff_error * 1.7:
+                # GPIO.output(17, GPIO.HIGH)
                 self.buffer_frame = roi_frame
 
                 # textBrowser에 로그 기록
-                now = time.strftime('%y%m%d_%H%M%S', time.localtime(time.time()))
-                textBrowser.append(now + ', count=' + str(self.motion_count))
+                now = time.localtime()
+                textBrowser.append(
+                    "이상 감지 : " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) + "일" + str(
+                        now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
 
             else:
                 self.buffer_frame = roi_frame
@@ -111,6 +121,10 @@ class ShowVideo(QtCore.QObject):
             loop = QtCore.QEventLoop()
             QtCore.QTimer.singleShot(33, loop.quit)
             loop.exec_()
+
+    def quit(self):
+        # GPIO.cleanup()
+        app.quit()
 
 
 class ImageViewer(QtWidgets.QWidget):
@@ -158,16 +172,21 @@ if __name__ == '__main__':
     horizontal_layout.addWidget(image_viewer2)
     horizontal_layout.addWidget(textBrowser)
 
-    push_button1 = QtWidgets.QPushButton('Start')
-    push_button1.clicked.connect(vid.startVideo)
+    start_button = QtWidgets.QPushButton('시작')
+    start_button.clicked.connect(vid.startVideo)
+    quit_button = QtWidgets.QPushButton("종료")
+    quit_button.clicked.connect(vid.quit)
+
     vertical_layout = QtWidgets.QVBoxLayout()
     vertical_layout.addLayout(horizontal_layout)
-    vertical_layout.addWidget(push_button1)
+    vertical_layout.addWidget(start_button)
 
     layout_widget = QtWidgets.QWidget()
     layout_widget.setLayout(vertical_layout)
+    vertical_layout.addWidget(quit_button)
 
     main_window = QtWidgets.QMainWindow()
     main_window.setCentralWidget(layout_widget)
+    main_window.setGeometry(100, 100, 1200, 400)
     main_window.show()
     app.exec_()
