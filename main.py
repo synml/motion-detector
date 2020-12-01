@@ -6,6 +6,14 @@ import numpy as np
 from PyQt5 import QtCore, QtWidgets, QtGui
 
 
+raspMode = False
+if raspMode:
+    import RPi.GPIO as GPIO
+
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(17, GPIO.OUT)
+
+
 class ShowVideo(QtCore.QObject):
     VideoSignal1 = QtCore.pyqtSignal(QtGui.QImage)
     VideoSignal2 = QtCore.pyqtSignal(QtGui.QImage)
@@ -21,6 +29,7 @@ class ShowVideo(QtCore.QObject):
         self.buffer_frame = None
         self.motion_count = 0
         self.total_frame = 0
+        self.loop_time = 500
 
     def onMouse(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -44,10 +53,8 @@ class ShowVideo(QtCore.QObject):
     def startVideo(self):
         now = time.localtime()
         start_button.hide()
-        textBrowser.append("Start Time : " +
-                           str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) + "일" + str(
-            now.tm_hour) + "시" + str(
-            now.tm_min) + "분" + str(now.tm_sec) + "초")
+        textBrowser.append("시작 시간: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) + "일" +
+                           str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
 
         ret, frame = self.camera.read()
 
@@ -85,10 +92,8 @@ class ShowVideo(QtCore.QObject):
 
                 # textBrowser에 로그 기록
                 now = time.localtime()
-                textBrowser.append(
-                    "이상 감지 : " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) + "일" + str(
-                        now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
-
+                textBrowser.append("이상 감지: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
+                                   "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
             else:
                 self.buffer_frame = roi_frame
 
@@ -119,7 +124,7 @@ class ShowVideo(QtCore.QObject):
             self.motion_count += 1
 
             loop = QtCore.QEventLoop()
-            QtCore.QTimer.singleShot(33, loop.quit)
+            QtCore.QTimer.singleShot(self.loop_time, loop.quit)
             loop.exec_()
 
     def quit(self):
