@@ -8,8 +8,10 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 try:
     import RPi.GPIO as GPIO
     rasp = True
+    pin = 11
 except ModuleNotFoundError:
     rasp = False
+    pin = 0
 
 
 class ShowVideo(QtCore.QObject):
@@ -86,7 +88,7 @@ class ShowVideo(QtCore.QObject):
             print(subtract_frame)
             if subtract_frame > buff_error * 1.7:
                 if rasp:
-                    GPIO.output(17, GPIO.HIGH)
+                    GPIO.output(pin, GPIO.HIGH)
                 pygame.mixer.music.play()
                 self.buffer_frame = roi_frame
 
@@ -96,7 +98,7 @@ class ShowVideo(QtCore.QObject):
                                    "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
             else:
                 if rasp:
-                    GPIO.output(17, GPIO.LOW)
+                    GPIO.output(pin, GPIO.LOW)
                 self.buffer_frame = roi_frame
 
             # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
@@ -165,8 +167,8 @@ if __name__ == '__main__':
     pygame.mixer.music.load("res/alert.mp3")
 
     if rasp:
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(17, GPIO.OUT)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(pin, GPIO.OUT)
 
     app = QtWidgets.QApplication(sys.argv)
 
