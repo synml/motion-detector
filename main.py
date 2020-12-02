@@ -148,9 +148,6 @@ class ImageViewer(QtWidgets.QWidget):
         painter.drawImage(0, 0, self.image)
         self.image = QtGui.QImage()
 
-    def initUI(self):
-        self.setWindowTitle('Test')
-
     @QtCore.pyqtSlot(QtGui.QImage)
     def setImage(self, image):
         if image.isNull():
@@ -203,7 +200,9 @@ if __name__ == '__main__':
     vertical_layout.addWidget(quit_button)
 
     main_window = QtWidgets.QMainWindow()
+    main_window.setWindowTitle('Motion Detector')
+    main_window.setWindowIcon(QtGui.QIcon('res/icon.png'))
     main_window.setCentralWidget(layout_widget)
-    main_window.setGeometry(100, 100, 1200, 400)
+    main_window.setGeometry(100, 100, 1280, 400)
     main_window.show()
     app.exec_()
