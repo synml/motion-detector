@@ -3,17 +3,13 @@ import time
 
 import cv2
 import numpy as np
-from PyQt5 import QtCore, QtWidgets, QtGui
-
 import pygame
-pygame.mixer.init()
-pygame.mixer.music.load("res/alert.mp3")
-
-rasp = False
-if rasp:
+from PyQt5 import QtCore, QtWidgets, QtGui
+try:
     import RPi.GPIO as GPIO
-    GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(17, GPIO.OUT)
+    rasp = True
+except ModuleNotFoundError:
+    rasp = False
 
 
 class ShowVideo(QtCore.QObject):
@@ -165,6 +161,13 @@ class ImageViewer(QtWidgets.QWidget):
 
 
 if __name__ == '__main__':
+    pygame.mixer.init()
+    pygame.mixer.music.load("res/alert.mp3")
+
+    if rasp:
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(17, GPIO.OUT)
+
     app = QtWidgets.QApplication(sys.argv)
 
     thread = QtCore.QThread()
