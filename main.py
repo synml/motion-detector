@@ -8,7 +8,7 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 try:
     import RPi.GPIO as GPIO
     rasp = True
-    pin = 11
+    pin = 24
 except ModuleNotFoundError:
     rasp = False
     pin = 0
