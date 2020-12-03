@@ -8,10 +8,12 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 try:
     import RPi.GPIO as GPIO
     rasp = True
-    pin = 24
+    idle = 25
+    alert = 24
 except ModuleNotFoundError:
     rasp = False
-    pin = 0
+    idle = 25
+    alert = 24
 
 
 class ShowVideo(QtCore.QObject):
@@ -34,6 +36,11 @@ class ShowVideo(QtCore.QObject):
         self.idleMode = False # Flag변수, 이상 감지 후 유휴 상태 돌입
         self.maxIdleCount = 5000 # (1000 = 1s ) idleMode가 True일 때 이상 감지를 몇 초 간 안할것인가
         self.idleCount = 0 # idleMode가 True일 때 이상 감지 누적 시간( idelCount == maxIdelCount 가 되면 idleMode = False )
+
+        self.roiMode = False
+
+
+        self.roiDialog = QtWidgets.QDialog()
 
 
 
@@ -83,9 +90,9 @@ class ShowVideo(QtCore.QObject):
                 firstFrame = cv2.cvtColor(firstFrame, cv2.COLOR_BGR2GRAY)
                 self.buffer_frame = firstFrame[self.default_y:roi_cols, self.default_x:roi_rows]
 
-            roi_frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
+            self.roi_frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
             buffer_frame_norm = self.buffer_frame
-            roi_frame_norm = roi_frame
+            roi_frame_norm = self.roi_frame
             #buffer_frame_norm = 1 / (1 + np.exp(-self.buffer_frame, dtype=np.float64))  # SIGMOID
             #roi_frame_norm = 1 / (1 + np.exp(-roi_frame, dtype=np.float64))  # SIGMOID
             subtract_frame = np.round(np.sqrt(np.sum((buffer_frame_norm - roi_frame_norm) ** 2)))  # L2 DISTANCE
@@ -97,6 +104,7 @@ class ShowVideo(QtCore.QObject):
             print(subtract_frame)
 
             if self.idleMode :
+                GPIO.output(idle, GPIO.HIGH)
                 self.idleCount += self.loop_time
                 now = time.localtime()
                 #textBrowser.append("유휴 상태: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
@@ -104,6 +112,7 @@ class ShowVideo(QtCore.QObject):
 
                 #print("유휴")
                 if self.idleCount  == self.maxIdleCount:
+                    GPIO.output(idle, GPIO.LOW)
                     self.idleCount = 0
                     self.idleMode = False
                     #print("유휴상태 끝")
@@ -115,7 +124,7 @@ class ShowVideo(QtCore.QObject):
                 threshold = buff_error * 1.5
                 if subtract_frame > threshold:
                     if rasp:
-                        GPIO.output(pin, GPIO.HIGH)
+                        GPIO.output(alert, GPIO.HIGH)
                     pygame.mixer.music.play()
                     #self.buffer_frame = roi_frame
 
@@ -127,10 +136,10 @@ class ShowVideo(QtCore.QObject):
                     self.idleMode = True
                 else:
                     if rasp:
-                        GPIO.output(pin, GPIO.LOW)
+                        GPIO.output(alert, GPIO.LOW)
                     #self.buffer_frame = roi_frame
 
-            self.buffer_frame = roi_frame # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
+            self.buffer_frame = self.roi_frame # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
             # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
             buff_error = subtract_frame
             bounding_box_frame = frame.copy()
@@ -143,16 +152,17 @@ class ShowVideo(QtCore.QObject):
                                      output_frame.strides[0],
                                      QtGui.QImage.Format_Grayscale8)
 
-            h, w = roi_frame.shape
-            roi_frame_cvt_mat = cv2.resize(roi_frame, (h, w))
+            self.VideoSignal1.emit(qt_image1)
 
-            qt_image2 = QtGui.QImage(roi_frame_cvt_mat.data,
+
+            h, w = self.roi_frame.shape
+            self.roi_frame_cvt_mat = cv2.resize(self.roi_frame, (h, w))
+
+            qt_image2 = QtGui.QImage(self.roi_frame_cvt_mat.data,
                                      h,
                                      w,
-                                     roi_frame_cvt_mat.strides[0],
+                                     self.roi_frame_cvt_mat.strides[0],
                                      QtGui.QImage.Format_Grayscale8)
-
-            self.VideoSignal1.emit(qt_image1)
             self.VideoSignal2.emit(qt_image2)
 
             self.motion_count += 1
@@ -161,15 +171,48 @@ class ShowVideo(QtCore.QObject):
             QtCore.QTimer.singleShot(self.loop_time, loop.quit)
             loop.exec_()
 
+    # def showRoI(self):
+    #     self.roiMode = True
+    #     # NewWindow(self)
+    #
+    #
+    # # 버튼 이벤트 함수
+    # def dialog_open(self):
+    #     # 버튼 추가
+    #     #btnDialog = QtWidgets.QPushButton("OK", self.roiDialog)
+    #     #btnDialog.move(100, 100)
+    #     #btnDialog.clicked.connect(self.dialog_close)
+    #
+    #     # QDialog 세팅
+    #     self.roiDialog.setWindowTitle('Dialog')
+    #     self.roiDialog.setWindowModality(QtCore.Qt.NonModal)
+    #     self.roiDialog.resize(300, 200)
+    #     self.roiDialog.show()
+
+
+    # # Dialog 닫기 이벤트
+    # def dialog_close(self):
+    #     self.roiDialog.close()
+
     def quit(self):
         if rasp:
             GPIO.cleanup()
         app.quit()
 
-    def catch_exceptions(t, val, tb):
-        QtWidgets.QMessageBox.critical(None,
-                                       "An exception was raised",
-                                       "Exception type: {}".format(t))
+    # def catch_exceptions(t, val, tb):
+    #     QtWidgets.QMessageBox.critical(None,
+    #                                    "An exception was raised",
+    #                                    "Exception type: {}".format(t))
+
+# class NewWindow(QtWidgets.QMainWindow):
+#     def __init__(self, parent=None):
+#         super(NewWindow, self).__init__(parent)
+#         self.label = QtWidgets.QLabel('New Window!')
+#         centralWidget = QtWidgets.QWidget()
+#         self.setCentralWidget(centralWidget)
+#         self.layout = QtWidgets.QGridLayout(centralWidget)
+#         self.layout.addWidget(self.label)
+
 
 
 class ImageViewer(QtWidgets.QWidget):
@@ -195,12 +238,14 @@ class ImageViewer(QtWidgets.QWidget):
 
 
 if __name__ == '__main__':
+    pygame.init()
     pygame.mixer.init()
     pygame.mixer.music.load("res/alert.mp3")
 
     if rasp:
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(pin, GPIO.OUT)
+        GPIO.setup(alert, GPIO.OUT)
+        GPIO.setup(idle, GPIO.OUT)
 
     app = QtWidgets.QApplication(sys.argv)
 
@@ -218,8 +263,21 @@ if __name__ == '__main__':
     textBrowser = QtWidgets.QTextBrowser()
     horizontal_layout = QtWidgets.QHBoxLayout()
     horizontal_layout.addWidget(image_viewer1)
+
+    # RoI
+    showRoi_button = QtWidgets.QPushButton('Show RoI') #ROI 버튼 보기
+
+
+    # showRoi_button.clicked.connect(vid.dialog_open)
+
+
     horizontal_layout.addWidget(image_viewer2)
+
     horizontal_layout.addWidget(textBrowser)
+
+
+    # horizontal_layout.addWidget(showRoi_button)
+    # horizontal_layout.addWidget(closeRoi_button)
 
     start_button = QtWidgets.QPushButton('시작')
     start_button.clicked.connect(vid.startVideo)
