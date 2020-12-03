@@ -20,7 +20,7 @@ class ShowVideo(QtCore.QObject):
 
     def __init__(self, parent=None):
         super(ShowVideo, self).__init__(parent)
-        self.camera = cv2.VideoCapture(0)
+        self.camera = cv2.VideoCapture(1)
         self.height, self.width, _ = self.camera.read()[1].shape
 
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
@@ -30,6 +30,12 @@ class ShowVideo(QtCore.QObject):
         self.motion_count = 0
         self.total_frame = 0
         self.loop_time = 500
+
+        self.idleMode = False # Flag변수, 이상 감지 후 유휴 상태 돌입
+        self.maxIdleCount = 5000 # (1000 = 1s ) idleMode가 True일 때 이상 감지를 몇 초 간 안할것인가
+        self.idleCount = 0 # idleMode가 True일 때 이상 감지 누적 시간( idelCount == maxIdelCount 가 되면 idleMode = False )
+
+
 
     def onMouse(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -56,12 +62,12 @@ class ShowVideo(QtCore.QObject):
         textBrowser.append("시작 시간: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) + "일" +
                            str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
 
-        ret, frame = self.camera.read()
+        ret, firstFrame = self.camera.read()
 
         # shape[0] = 높이 , shape[1] = 너비
         cv2.startWindowThread()
-        cv2.imshow('video', frame)
-        cv2.setMouseCallback("video", self.onMouse, param=frame)
+        cv2.imshow('video', firstFrame)
+        cv2.setMouseCallback("video", self.onMouse, param=firstFrame)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
@@ -74,33 +80,57 @@ class ShowVideo(QtCore.QObject):
             roi_rows = self.default_x + self.w
             frame = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             if self.buffer_frame is None:
-                self.buffer_frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
+                firstFrame = cv2.cvtColor(firstFrame, cv2.COLOR_BGR2GRAY)
+                self.buffer_frame = firstFrame[self.default_y:roi_cols, self.default_x:roi_rows]
 
             roi_frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
-            buffer_frame_norm = 1 / (1 + np.exp(-self.buffer_frame, dtype=np.float64))  # SIGMOID
-            roi_frame_norm = 1 / (1 + np.exp(-roi_frame, dtype=np.float64))  # SIGMOID
-            subtract_frame = np.sqrt(np.sum((buffer_frame_norm - roi_frame_norm) ** 2))  # L2 DISTANCE
+            buffer_frame_norm = self.buffer_frame
+            roi_frame_norm = roi_frame
+            #buffer_frame_norm = 1 / (1 + np.exp(-self.buffer_frame, dtype=np.float64))  # SIGMOID
+            #roi_frame_norm = 1 / (1 + np.exp(-roi_frame, dtype=np.float64))  # SIGMOID
+            subtract_frame = np.round(np.sqrt(np.sum((buffer_frame_norm - roi_frame_norm) ** 2)))  # L2 DISTANCE
 
             if self.total_frame == 1:
                 buff_error = subtract_frame
 
             # cv2.imshow('roi', self.buffer_Frame)
             print(subtract_frame)
-            if subtract_frame > buff_error * 1.7:
-                if rasp:
-                    GPIO.output(pin, GPIO.HIGH)
-                pygame.mixer.music.play()
-                self.buffer_frame = roi_frame
 
-                # textBrowser에 로그 기록
+            if self.idleMode :
+                self.idleCount += self.loop_time
                 now = time.localtime()
-                textBrowser.append("이상 감지: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
-                                   "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
-            else:
-                if rasp:
-                    GPIO.output(pin, GPIO.LOW)
-                self.buffer_frame = roi_frame
+                #textBrowser.append("유휴 상태: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
+                #                   "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
 
+                #print("유휴")
+                if self.idleCount  == self.maxIdleCount:
+                    self.idleCount = 0
+                    self.idleMode = False
+                    #print("유휴상태 끝")
+                    # now = time.localtime()
+                    # textBrowser.append("정상 모드: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
+                    #                    "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
+
+            else :
+                threshold = buff_error * 1.5
+                if subtract_frame > threshold:
+                    if rasp:
+                        GPIO.output(pin, GPIO.HIGH)
+                    pygame.mixer.music.play()
+                    #self.buffer_frame = roi_frame
+
+                    # textBrowser에 로그 기록
+                    now = time.localtime()
+                    textBrowser.append("이상 감지: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
+                                       "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
+
+                    self.idleMode = True
+                else:
+                    if rasp:
+                        GPIO.output(pin, GPIO.LOW)
+                    #self.buffer_frame = roi_frame
+
+            self.buffer_frame = roi_frame # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
             # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
             buff_error = subtract_frame
             bounding_box_frame = frame.copy()
@@ -135,6 +165,11 @@ class ShowVideo(QtCore.QObject):
         if rasp:
             GPIO.cleanup()
         app.quit()
+
+    def catch_exceptions(t, val, tb):
+        QtWidgets.QMessageBox.critical(None,
+                                       "An exception was raised",
+                                       "Exception type: {}".format(t))
 
 
 class ImageViewer(QtWidgets.QWidget):
