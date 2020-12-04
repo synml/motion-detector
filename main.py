@@ -22,26 +22,22 @@ class ShowVideo(QtCore.QObject):
 
     def __init__(self, parent=None):
         super(ShowVideo, self).__init__(parent)
-        self.camera = cv2.VideoCapture(1)
+
+        self.camera = cv2.VideoCapture(0)
+        self.logic = True
         self.height, self.width, _ = self.camera.read()[1].shape
 
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
-        self.blue = (255, 0, 0)
-        self.yellow = (0, 255, 255)
         self.buffer_frame = None
-        self.motion_count = 0
-        self.total_frame = 0
-        self.loop_time = 500
 
+        self.total_frame = 0
+        self.loop_time = 100 # 프레임 처리 간격 (100 = 0.1초)
+        self.buffError = 0 # 이전 프레임 기준 오차율
         self.idleMode = False # Flag변수, 이상 감지 후 유휴 상태 돌입
         self.maxIdleCount = 5000 # (1000 = 1s ) idleMode가 True일 때 이상 감지를 몇 초 간 안할것인가
         self.idleCount = 0 # idleMode가 True일 때 이상 감지 누적 시간( idelCount == maxIdelCount 가 되면 idleMode = False )
 
         self.roiMode = False
-
-
-        self.roiDialog = QtWidgets.QDialog()
-
 
 
     def onMouse(self, event, x, y, flags, param):
@@ -55,12 +51,11 @@ class ShowVideo(QtCore.QObject):
 
             if self.w > 0 and self.h > 0:
                 img_draw = param.copy()
-                cv2.rectangle(img_draw, (self.default_x, self.default_y), (x, y), self.yellow, 2)
+                cv2.rectangle(img_draw, (self.default_x, self.default_y), (x, y), (0, 255, 255), 2)
                 cv2.imshow('video', img_draw)
 
-                # roi = frame[self.default_y:roi_cols, self.default_x:roi_rows]
-                # threshhold = np.shape(np.ravel(roi))[0]
-            print(self.default_x, self.default_y, self.w, self.h)
+
+
 
     @QtCore.pyqtSlot()
     def startVideo(self):
@@ -78,7 +73,7 @@ class ShowVideo(QtCore.QObject):
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-        while True:
+        while self.logic:
             ret, image = self.camera.read()
 
             # 처리 로직
@@ -91,37 +86,29 @@ class ShowVideo(QtCore.QObject):
                 self.buffer_frame = firstFrame[self.default_y:roi_cols, self.default_x:roi_rows]
 
             self.roi_frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
-            buffer_frame_norm = self.buffer_frame
-            roi_frame_norm = self.roi_frame
-            #buffer_frame_norm = 1 / (1 + np.exp(-self.buffer_frame, dtype=np.float64))  # SIGMOID
-            #roi_frame_norm = 1 / (1 + np.exp(-roi_frame, dtype=np.float64))  # SIGMOID
-            subtract_frame = np.round(np.sqrt(np.sum((buffer_frame_norm - roi_frame_norm) ** 2)))  # L2 DISTANCE
+            subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
 
             if self.total_frame == 1:
-                buff_error = subtract_frame
+                self.buffError = subtract_frame
 
             # cv2.imshow('roi', self.buffer_Frame)
             print(subtract_frame)
 
+            # 유휴 상태
             if self.idleMode :
-                GPIO.output(idle, GPIO.HIGH)
-                self.idleCount += self.loop_time
-                now = time.localtime()
-                #textBrowser.append("유휴 상태: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
-                #                   "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
+                if rasp:
+                    GPIO.output(idle, GPIO.HIGH) # rasp인 경우 GPIO 출력
+                self.idleCount += self.loop_time # 유휴상태 경과 시간 += 루프 간격
 
-                #print("유휴")
-                if self.idleCount  == self.maxIdleCount:
-                    GPIO.output(idle, GPIO.LOW)
-                    self.idleCount = 0
-                    self.idleMode = False
-                    #print("유휴상태 끝")
-                    # now = time.localtime()
-                    # textBrowser.append("정상 모드: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
-                    #                    "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
+                if self.idleCount  == self.maxIdleCount: # 유휴상태 경과시간이 유휴시간 임계값에 도달한 경우
+                    if rasp:
+                        GPIO.output(idle, GPIO.LOW) # RASP인 경우 GPIO OFF
+                    self.idleCount = 0 # 유휴상태 경과시간 초기화
+                    self.idleMode = False # 유휴상태 해제
 
+            # 일반 감지 모드
             else :
-                threshold = buff_error * 1.5
+                threshold = self.buffError * 1.5
                 if subtract_frame > threshold:
                     if rasp:
                         GPIO.output(alert, GPIO.HIGH)
@@ -141,7 +128,7 @@ class ShowVideo(QtCore.QObject):
 
             self.buffer_frame = self.roi_frame # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
             # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
-            buff_error = subtract_frame
+            self.buffError = subtract_frame
             bounding_box_frame = frame.copy()
             output_frame = cv2.rectangle(bounding_box_frame, (self.default_x, self.default_y),
                                          (self.default_x + self.w, self.default_y + self.h), (0, 255, 0),
@@ -165,55 +152,20 @@ class ShowVideo(QtCore.QObject):
                                      QtGui.QImage.Format_Grayscale8)
             self.VideoSignal2.emit(qt_image2)
 
-            self.motion_count += 1
+
 
             loop = QtCore.QEventLoop()
-            QtCore.QTimer.singleShot(self.loop_time, loop.quit)
-            loop.exec_()
+            QtCore.QTimer.singleShot(self.loop_time, loop.quit) # 이벤트 루트 간격
+            loop.exec_() # 이벤트 루프 호출
 
-    # def showRoI(self):
-    #     self.roiMode = True
-    #     # NewWindow(self)
-    #
-    #
-    # # 버튼 이벤트 함수
-    # def dialog_open(self):
-    #     # 버튼 추가
-    #     #btnDialog = QtWidgets.QPushButton("OK", self.roiDialog)
-    #     #btnDialog.move(100, 100)
-    #     #btnDialog.clicked.connect(self.dialog_close)
-    #
-    #     # QDialog 세팅
-    #     self.roiDialog.setWindowTitle('Dialog')
-    #     self.roiDialog.setWindowModality(QtCore.Qt.NonModal)
-    #     self.roiDialog.resize(300, 200)
-    #     self.roiDialog.show()
-
-
-    # # Dialog 닫기 이벤트
-    # def dialog_close(self):
-    #     self.roiDialog.close()
 
     def quit(self):
+        self.logic = False # 메인로직 반복 종료
         if rasp:
             GPIO.cleanup()
-        app.quit()
-
-    # def catch_exceptions(t, val, tb):
-    #     QtWidgets.QMessageBox.critical(None,
-    #                                    "An exception was raised",
-    #                                    "Exception type: {}".format(t))
-
-# class NewWindow(QtWidgets.QMainWindow):
-#     def __init__(self, parent=None):
-#         super(NewWindow, self).__init__(parent)
-#         self.label = QtWidgets.QLabel('New Window!')
-#         centralWidget = QtWidgets.QWidget()
-#         self.setCentralWidget(centralWidget)
-#         self.layout = QtWidgets.QGridLayout(centralWidget)
-#         self.layout.addWidget(self.label)
-
-
+        thread.quit() # 쓰레드 반환
+        thread.wait(5000) # 쓰레드 반환 데드라인 5초
+        app.quit() # 앱 최종 종료
 
 class ImageViewer(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -265,7 +217,7 @@ if __name__ == '__main__':
     horizontal_layout.addWidget(image_viewer1)
 
     # RoI
-    showRoi_button = QtWidgets.QPushButton('Show RoI') #ROI 버튼 보기
+    # showRoi_button = QtWidgets.QPushButton('Show RoI') #ROI 버튼 보기
 
 
     # showRoi_button.clicked.connect(vid.dialog_open)
