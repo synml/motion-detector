@@ -1,3 +1,8 @@
+"""
+1206 ROI 새창 띄우기 테스트 코드
+
+"""
+
 import sys
 import time
 
@@ -16,13 +21,17 @@ except ModuleNotFoundError:
     alert = 24
 
 
+
+
 class ShowVideo(QtCore.QObject):
     VideoSignal1 = QtCore.pyqtSignal(QtGui.QImage)
     VideoSignal2 = QtCore.pyqtSignal(QtGui.QImage)
 
+
+
     def __init__(self, parent=None):
         super(ShowVideo, self).__init__(parent)
-
+        self.roiDialog = QtWidgets.QDialog()
         self.camera = cv2.VideoCapture(0)
         self.logic = True
         self.height, self.width, _ = self.camera.read()[1].shape
@@ -154,9 +163,17 @@ class ShowVideo(QtCore.QObject):
 
 
 
+
             loop = QtCore.QEventLoop()
             QtCore.QTimer.singleShot(self.loop_time, loop.quit) # 이벤트 루트 간격
             loop.exec_() # 이벤트 루프 호출
+
+    def activeRoI(self):
+        print("roi")
+        self.roiDialog.setWindowTitle('test')
+        self.roiDialog.setWindowModality(QtCore.Qt.NonModal)
+        self.roiDialog.resize(300, 200)
+        # self.roiDialog.show()
 
 
     def quit(self):
@@ -166,6 +183,9 @@ class ShowVideo(QtCore.QObject):
         thread.quit() # 쓰레드 반환
         thread.wait(5000) # 쓰레드 반환 데드라인 5초
         app.quit() # 앱 최종 종료
+
+
+
 
 class ImageViewer(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -189,6 +209,36 @@ class ImageViewer(QtWidgets.QWidget):
         self.update()
 
 
+# class TestVideo():
+#     print("testvideo 객체 호출")
+#
+#     # roiWidget = QtWidgets.QWidget()
+#     # roiLayout = QtWidgets.QVBoxLayout()
+#     # image_viewer3 = ImageViewer()
+#     # roiLayout.addWidget(image_viewer3)
+#     # roiWidget.setLayout(roiLayout)
+#     #roiWidget.show()
+#
+#
+#
+#     def __init__(self, roiWidget):
+#           # roi영역 출력 화면
+#         self.roiWidget = QtWidgets.QWidget()
+#         self.roiLayout = QtWidgets.QVBoxLayout()
+#
+#
+#         image_viewer3 = ImageViewer()
+#         self.roiLayout.addWidget(image_viewer3)
+#         #
+#         test = ShowVideo
+#         test.VideoSignal2.connect(image_viewer2.setImage)
+#         self.roiWidget.setLayout(self.roiLayout)
+#
+#
+#     def activateRoI(self):
+#         self.roiWidget.show()
+
+
 if __name__ == '__main__':
     pygame.init()
     pygame.mixer.init()
@@ -202,31 +252,67 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
     thread = QtCore.QThread()
+
     thread.start()
+
     vid = ShowVideo()
     vid.moveToThread(thread)
 
+
+    # vid2.moveToThread(thread)
+
+
+
     image_viewer1 = ImageViewer()
     image_viewer2 = ImageViewer()
+    image_viewer3 = ImageViewer()
 
-    vid.VideoSignal1.connect(image_viewer1.setImage)
-    vid.VideoSignal2.connect(image_viewer2.setImage)
+
+    vid.VideoSignal1.connect(image_viewer1.setImage) # 감지 카메라 출력 전체 화면
+    vid.VideoSignal2.connect(image_viewer2.setImage) # roi영역 출력 화면
+    vid.VideoSignal2.connect(image_viewer3.setImage) # roi영역 출력 화면
+
+
+
 
     textBrowser = QtWidgets.QTextBrowser()
     horizontal_layout = QtWidgets.QHBoxLayout()
     horizontal_layout.addWidget(image_viewer1)
 
-    # RoI
-    # showRoi_button = QtWidgets.QPushButton('Show RoI') #ROI 버튼 보기
 
 
-    # showRoi_button.clicked.connect(vid.dialog_open)
 
 
     horizontal_layout.addWidget(image_viewer2)
 
     horizontal_layout.addWidget(textBrowser)
 
+    #############
+    # roi 창 테스트
+    roiWidget = QtWidgets.QWidget()
+    roiLayout = QtWidgets.QVBoxLayout()
+    roiLayout.addWidget(image_viewer3)
+    roiWidget.setLayout(roiLayout)
+    def create():
+        roiWidget.show()
+
+
+    roiButton = QtWidgets.QPushButton('Dialog Button')
+
+    roiButton.clicked.connect(create)
+    roiButton.setGeometry(10, 10, 200, 50)
+    horizontal_layout.addWidget(roiButton)
+
+    # roiDialog = QtWidgets.QDialog()
+    # roiDialog.setWindowTitle('test')
+    # roiDialog.setWindowModality(QtCore.Qt.NonModal)
+    # roiDialog.resize(300, 200)
+    # roiDialog.show()
+
+
+
+
+    ###############
 
     # horizontal_layout.addWidget(showRoi_button)
     # horizontal_layout.addWidget(closeRoi_button)
