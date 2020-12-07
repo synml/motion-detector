@@ -11,6 +11,9 @@ class Camera(QtCore.QObject):
         super(Camera, self).__init__()
         self.capture = cv2.VideoCapture(1)
         self.label = label
+        width = self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
+        height = self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        self.label.resize(width, height)
 
     def start(self):
         while True:
@@ -24,7 +27,6 @@ class Camera(QtCore.QObject):
             qimg = QtGui.QImage(img.data, w, h, w * c, QtGui.QImage.Format_RGB888)
             pixmap = QtGui.QPixmap.fromImage(qimg)
             self.label.setPixmap(pixmap)
-            self.label.resize(pixmap.width(), pixmap.height())
             cv2.waitKey(33)
 
 
