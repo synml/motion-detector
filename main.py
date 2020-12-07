@@ -5,8 +5,10 @@ import cv2
 import numpy as np
 import pygame
 from PyQt5 import QtCore, QtWidgets, QtGui
+
 try:
     import RPi.GPIO as GPIO
+
     rasp = True
     idle = 25
     alert = 24
@@ -31,14 +33,11 @@ class ShowVideo(QtCore.QObject):
         self.buffer_frame = None
 
         self.total_frame = 0
-        self.loop_time = 100 # 프레임 처리 간격 (100 = 0.1초)
-        self.buffError = 0 # 이전 프레임 기준 오차율
-        self.idleMode = False # Flag변수, 이상 감지 후 유휴 상태 돌입
-        self.maxIdleCount = 5000 # (1000 = 1s ) idleMode가 True일 때 이상 감지를 몇 초 간 안할것인가
-        self.idleCount = 0 # idleMode가 True일 때 이상 감지 누적 시간( idelCount == maxIdelCount 가 되면 idleMode = False )
-
-
-
+        self.loop_time = 100  # 프레임 처리 간격 (100 = 0.1초)
+        self.buffError = 0  # 이전 프레임 기준 오차율
+        self.idleMode = False  # Flag변수, 이상 감지 후 유휴 상태 돌입
+        self.maxIdleCount = 5000  # (1000 = 1s ) idleMode가 True일 때 이상 감지를 몇 초 간 안할것인가
+        self.idleCount = 0  # idleMode가 True일 때 이상 감지 누적 시간( idelCount == maxIdelCount 가 되면 idleMode = False )
 
     def onMouse(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -53,9 +52,6 @@ class ShowVideo(QtCore.QObject):
                 img_draw = param.copy()
                 cv2.rectangle(img_draw, (self.default_x, self.default_y), (x, y), (0, 255, 255), 2)
                 cv2.imshow('video', img_draw)
-
-
-
 
     @QtCore.pyqtSlot()
     def startVideo(self):
@@ -95,25 +91,25 @@ class ShowVideo(QtCore.QObject):
             print(subtract_frame)
 
             # 유휴 상태
-            if self.idleMode :
+            if self.idleMode:
                 if rasp:
-                    GPIO.output(idle, GPIO.HIGH) # rasp인 경우 GPIO 출력
-                self.idleCount += self.loop_time # 유휴상태 경과 시간 += 루프 간격
+                    GPIO.output(idle, GPIO.HIGH)  # rasp인 경우 GPIO 출력
+                self.idleCount += self.loop_time  # 유휴상태 경과 시간 += 루프 간격
 
-                if self.idleCount  == self.maxIdleCount: # 유휴상태 경과시간이 유휴시간 임계값에 도달한 경우
+                if self.idleCount == self.maxIdleCount:  # 유휴상태 경과시간이 유휴시간 임계값에 도달한 경우
                     if rasp:
-                        GPIO.output(idle, GPIO.LOW) # RASP인 경우 GPIO OFF
-                    self.idleCount = 0 # 유휴상태 경과시간 초기화
-                    self.idleMode = False # 유휴상태 해제
+                        GPIO.output(idle, GPIO.LOW)  # RASP인 경우 GPIO OFF
+                    self.idleCount = 0  # 유휴상태 경과시간 초기화
+                    self.idleMode = False  # 유휴상태 해제
 
             # 일반 감지 모드
-            else :
+            else:
                 threshold = self.buffError * 1.5
                 if subtract_frame > threshold:
                     if rasp:
                         GPIO.output(alert, GPIO.HIGH)
                     pygame.mixer.music.play()
-                    #self.buffer_frame = roi_frame
+                    # self.buffer_frame = roi_frame
 
                     # textBrowser에 로그 기록
                     now = time.localtime()
@@ -124,9 +120,9 @@ class ShowVideo(QtCore.QObject):
                 else:
                     if rasp:
                         GPIO.output(alert, GPIO.LOW)
-                    #self.buffer_frame = roi_frame
+                    # self.buffer_frame = roi_frame
 
-            self.buffer_frame = self.roi_frame # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
+            self.buffer_frame = self.roi_frame  # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
             # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
             self.buffError = subtract_frame
             bounding_box_frame = frame.copy()
@@ -141,7 +137,6 @@ class ShowVideo(QtCore.QObject):
 
             self.VideoSignal1.emit(qt_image1)
 
-
             h, w = self.roi_frame.shape
             self.roi_frame_cvt_mat = cv2.resize(self.roi_frame, (h, w))
 
@@ -152,20 +147,18 @@ class ShowVideo(QtCore.QObject):
                                      QtGui.QImage.Format_Grayscale8)
             self.VideoSignal2.emit(qt_image2)
 
-
-
             loop = QtCore.QEventLoop()
-            QtCore.QTimer.singleShot(self.loop_time, loop.quit) # 이벤트 루트 간격
-            loop.exec_() # 이벤트 루프 호출
-
+            QtCore.QTimer.singleShot(self.loop_time, loop.quit)  # 이벤트 루트 간격
+            loop.exec_()  # 이벤트 루프 호출
 
     def quit(self):
-        self.logic = False # 메인로직 반복 종료
+        self.logic = False  # 메인로직 반복 종료
         if rasp:
             GPIO.cleanup()
-        thread.quit() # 쓰레드 반환
-        thread.wait(5000) # 쓰레드 반환 데드라인 5초
-        app.quit() # 앱 최종 종료
+        thread.quit()  # 쓰레드 반환
+        thread.wait(5000)  # 쓰레드 반환 데드라인 5초
+        app.quit()  # 앱 최종 종료
+
 
 class ImageViewer(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -219,14 +212,11 @@ if __name__ == '__main__':
     # RoI
     # showRoi_button = QtWidgets.QPushButton('Show RoI') #ROI 버튼 보기
 
-
     # showRoi_button.clicked.connect(vid.dialog_open)
-
 
     horizontal_layout.addWidget(image_viewer2)
 
     horizontal_layout.addWidget(textBrowser)
-
 
     # horizontal_layout.addWidget(showRoi_button)
     # horizontal_layout.addWidget(closeRoi_button)
