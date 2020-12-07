@@ -13,6 +13,11 @@
   <property name="windowTitle">
    <string>Motion Detector</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normalon>res/icon.png</normalon>
+   </iconset>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QWidget" name="horizontalLayoutWidget">
     <property name="geometry">
