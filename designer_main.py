@@ -7,23 +7,25 @@ form_class = uic.loadUiType('main.ui')[0]
 
 
 class Camera(QtCore.QObject):
-    def __init__(self):
+    def __init__(self, label):
         super(Camera, self).__init__()
-        self.cam = cv2.VideoCapture(0)
+        self.capture = cv2.VideoCapture(1)
+        self.label = label
 
     def start(self):
         while True:
-            ret, img = self.cam.read()
+            ret, img = self.capture.read()
             if not ret:
                 print('camera read error')
                 return
 
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             h, w, c = img.shape
             qimg = QtGui.QImage(img.data, w, h, w * c, QtGui.QImage.Format_RGB888)
             pixmap = QtGui.QPixmap.fromImage(qimg)
             self.label.setPixmap(pixmap)
             self.label.resize(pixmap.width(), pixmap.height())
-            cv2.waitKey(60)
+            cv2.waitKey(33)
 
 
 class MainWindow(QtWidgets.QMainWindow, form_class):
@@ -33,7 +35,7 @@ class MainWindow(QtWidgets.QMainWindow, form_class):
 
         self.thread = QtCore.QThread()
         self.thread.start()
-        self.camera = Camera()
+        self.camera = Camera(self.label)
         self.camera.moveToThread(self.thread)
 
         self.startButton.clicked.connect(self.camera.start)
