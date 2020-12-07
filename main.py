@@ -8,7 +8,6 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 
 try:
     import RPi.GPIO as GPIO
-
     rasp = True
     idle = 25
     alert = 24
@@ -208,18 +207,8 @@ if __name__ == '__main__':
     textBrowser = QtWidgets.QTextBrowser()
     horizontal_layout = QtWidgets.QHBoxLayout()
     horizontal_layout.addWidget(image_viewer1)
-
-    # RoI
-    # showRoi_button = QtWidgets.QPushButton('Show RoI') #ROI 버튼 보기
-
-    # showRoi_button.clicked.connect(vid.dialog_open)
-
     horizontal_layout.addWidget(image_viewer2)
-
     horizontal_layout.addWidget(textBrowser)
-
-    # horizontal_layout.addWidget(showRoi_button)
-    # horizontal_layout.addWidget(closeRoi_button)
 
     start_button = QtWidgets.QPushButton('시작')
     start_button.clicked.connect(vid.startVideo)
