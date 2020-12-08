@@ -18,14 +18,15 @@ except ModuleNotFoundError:
 """
 전역 설정란
 
-라벨 크기 : 800(w 너비) 600(h 높이)
+라벨 크기 : 800(w 너비)  600(h 높이)
 
 """
 
 label_w = 800
 label_h = 600
 
-form_class = uic.loadUiType('main.ui')[0]
+mainUi = uic.loadUiType('main.ui')[0]
+setOptionDialogUi = uic.loadUiType('setOptionDialog.ui')[0]
 
 
 class Camera(QtCore.QObject):
@@ -170,17 +171,81 @@ class Camera(QtCore.QObject):
             # cv2.waitKey(33)
 
 
-class MainWindow(QtWidgets.QMainWindow, form_class):
+
+
+    def quit(self):
+
+        self.logic = False  # 메인로직 반복 종료
+        if rasp:
+            GPIO.cleanup()
+        win.thread.quit()
+        win.thread.wait(5000)
+
+        app.quit()  # 앱 최종 종료
+
+
+class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
+    def __init__(self):
+        super(SubWindow, self).__init__()
+        self.setupUi(self)
+
+    # def showDialog(self):
+    #     print("다이얼로그 오픈")
+    #     # QtWidgets.QDialog.setWindowModality(self, QtCore.Qt.NonModal)
+
+
+
+
+    #     self.initUI()
+    #
+    # def initUI(self):
+    #     self.setWindowTitle('Sub Window')
+    #     self.setGeometry(100, 100, 200, 100)
+    #     layout = QtWidgets.QVBoxLayout()
+    #     layout.addStretch(1)
+    #     edit = QtWidgets.QLineEdit()
+    #     font = edit.font()
+    #     font.setPointSize(20)
+    #     edit.setFont(font)
+    #     self.edit = edit
+    #     subLayout = QtWidgets.QHBoxLayout()
+    #
+    #     btnOK = QtWidgets.QPushButton("확인")
+    #     btnOK.clicked.connect(self.onOKButtonClicked)
+    #     btnCancel = QtWidgets.QPushButton("취소")
+    #     btnCancel.clicked.connect(self.onCancelButtonClicked)
+    #     layout.addWidget(edit)
+    #
+    #     subLayout.addWidget(btnOK)
+    #     subLayout.addWidget(btnCancel)
+    #     layout.addLayout(subLayout)
+    #     layout.addStretch(1)
+    #     self.setLayout(layout)
+
+class MainWindow(QtWidgets.QMainWindow, mainUi):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setupUi(self)
 
         self.thread = QtCore.QThread()
         self.thread.start()
+        self.thread2 = QtCore.QThread()
+        self.thread2.start()
+
+
+
+
         self.camera = Camera(self.label, self.textBrowser)
         self.camera.moveToThread(self.thread)
 
+        self.setOptionDialog = SubWindow()
+        self.setOptionDialog.moveToThread(self.thread)
+
         self.startButton.clicked.connect(self.camera.startVideo)
+
+        self.setOptionButton.clicked.connect(self.setOptionDialog.show)
+
+        self.exitButton.clicked.connect(self.camera.quit)
 
 
 if __name__ == "__main__":
@@ -190,5 +255,7 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     win = MainWindow()
+
+
     win.show()
     app.exec_()
