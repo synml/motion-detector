@@ -1,10 +1,11 @@
 import sys
-from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5 import uic
-import cv2
 import time
+
+import cv2
 import numpy as np
 import pygame
+from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt5 import uic
 try:
     import RPi.GPIO as GPIO
     rasp = True
@@ -35,13 +36,12 @@ class Camera(QtCore.QObject):
         self.camera = cv2.VideoCapture(0)
         self.label = label
 
-
         self.textBrowser = textBrowser
-        #self.width = self.camera.get(cv2.CAP_PROP_FRAME_WIDTH)
-        #self.height = self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        # self.width = self.camera.get(cv2.CAP_PROP_FRAME_WIDTH)
+        # self.height = self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT)
         self.label.resize(label_w, label_h)
 
-        self.logic = True # 반복 루프 제어
+        self.logic = True  # 반복 루프 제어
 
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
         self.buffer_frame = None
@@ -55,7 +55,7 @@ class Camera(QtCore.QObject):
 
         # 첫 프레임 gui 라벨 이미지 설정
         ret, firstFrame = self.camera.read()
-        firstFrame= cv2.cvtColor(firstFrame, cv2.COLOR_BGR2GRAY)
+        firstFrame = cv2.cvtColor(firstFrame, cv2.COLOR_BGR2GRAY)
         firstFrame = cv2.resize(firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
         qimg = QtGui.QImage(firstFrame.data, firstFrame.shape[1], firstFrame.shape[0],
                             firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
@@ -77,9 +77,6 @@ class Camera(QtCore.QObject):
                 cv2.imshow('video', img_draw)
                 print(self.default_x, self.default_y, self.w, self.h)
 
-
-
-
     def startVideo(self):
         now = time.localtime()
         # textBrowser 이벤트 처리
@@ -97,7 +94,7 @@ class Camera(QtCore.QObject):
         print(self.default_x, self.default_y, self.w, self.h)
         while self.logic:
             ret, frame = self.camera.read()
-            if not ret: # 카메라 인식 안될경우
+            if not ret:  # 카메라 인식 안될경우
                 print('camera read error')
                 return
 
@@ -118,7 +115,7 @@ class Camera(QtCore.QObject):
                 self.buffError = subtract_frame
 
             # cv2.imshow('roi', self.buffer_Frame)
-            #print(subtract_frame)
+            # print(subtract_frame)
             print(self.default_x, self.default_y, self.w, self.h)
             # 유휴 상태
             if self.idleMode:
@@ -143,8 +140,9 @@ class Camera(QtCore.QObject):
 
                     # textBrowser에 로그 기록
                     now = time.localtime()
-                    self.textBrowser.append("이상 감지: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
-                                       "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
+                    self.textBrowser.append(
+                        "이상 감지: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
+                        "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
 
                     self.idleMode = True
                 else:
@@ -170,17 +168,12 @@ class Camera(QtCore.QObject):
             loop.exec_()
             # cv2.waitKey(33)
 
-
-
-
     def quit(self):
-
         self.logic = False  # 메인로직 반복 종료
         if rasp:
             GPIO.cleanup()
         win.thread.quit()
         win.thread.wait(5000)
-
         app.quit()  # 앱 최종 종료
 
 
@@ -192,9 +185,6 @@ class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
     # def showDialog(self):
     #     print("다이얼로그 오픈")
     #     # QtWidgets.QDialog.setWindowModality(self, QtCore.Qt.NonModal)
-
-
-
 
     #     self.initUI()
     #
@@ -222,6 +212,7 @@ class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
     #     layout.addStretch(1)
     #     self.setLayout(layout)
 
+
 class MainWindow(QtWidgets.QMainWindow, mainUi):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -231,9 +222,6 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.thread.start()
         self.thread2 = QtCore.QThread()
         self.thread2.start()
-
-
-
 
         self.camera = Camera(self.label, self.textBrowser)
         self.camera.moveToThread(self.thread)
@@ -255,7 +243,5 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     win = MainWindow()
-
-
     win.show()
     app.exec_()
