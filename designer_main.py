@@ -241,6 +241,7 @@ if __name__ == "__main__":
     pygame.mixer.init()
     pygame.mixer.music.load("res/alert.mp3")
 
+    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     app = QtWidgets.QApplication(sys.argv)
     win = MainWindow()
     win.show()
