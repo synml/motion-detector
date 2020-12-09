@@ -39,12 +39,18 @@ class camera():
 
     def __init__(self, rtsp_url):
         # load pipe for data transmittion to the process
+        self.rtsp_url = rtsp_url
         self.parent_conn, child_conn = mp.Pipe()
         # load process
         self.p = mp.Process(target=self.update, args=(child_conn, rtsp_url))
         # start process
         self.p.daemon = True
         self.p.start()
+
+    def get_first_frame(self):
+        firstFrameCap = cv2.VideoCapture(self.rtsp_url)
+        _, frame = firstFrameCap.read()
+        return  frame
 
     def end(self):
         # send closure request to process
@@ -59,7 +65,8 @@ class camera():
         cap = cv2.VideoCapture(rtsp_url)
 
         # cap = cv2.VideoCapture(rtsp_url, cv2.CAP_PROP_POS_FRAMES)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE , 30)
+        #cap.set(cv2.CAP_PROP_BUFFERSIZE , 30)
+
         print("Cam Loaded...")
         run = True
 
@@ -112,7 +119,7 @@ class Camera(QtCore.QObject):
     def __init__(self, label, textBrowser):
         super(Camera, self).__init__()
         # self.camera = cv2.VideoCapture(0)
-        ## self.camera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.100:554/test/media.smp')
+        self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.100:554/test/media.smp')
         self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.100:554/test/media.smp')
         self.rescale_value = None
 
@@ -132,18 +139,19 @@ class Camera(QtCore.QObject):
         self.loop_time = 1000  # 프레임 처리 간격 (100 = 0.1초)
         self.buffError = 0  # 이전 프레임 기준 오차율
         self.idleMode = False  # Flag변수, 이상 감지 후 유휴 상태 돌입
-        self.maxIdleCount = 5000  # (1000 = 1s ) idleMode가 True일 때 이상 감지를 몇 초 간 안할것인가
+        self.maxIdleCount = 20000  # (1000 = 1s ) idleMode가 True일 때 이상 감지를 몇 초 간 안할것인가
         self.idleCount = 0  # idleMode가 True일 때 이상 감지 누적 시간( idelCount == maxIdelCount 가 되면 idleMode = False )
 
         # 첫 프레임 gui 라벨 이미지 설정
 
         # ret, firstFrame = self.camera.read()
-        firstFrame = self.camera.get_frame(self.rescale_value)
+        #firstFrame = self.camera.get_frame()
+        self.firstFrame = self.camera.get_first_frame()
 
-        firstFrame = cv2.cvtColor(firstFrame, cv2.COLOR_BGR2GRAY)
-        firstFrame = cv2.resize(firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
-        qimg = QtGui.QImage(firstFrame.data, firstFrame.shape[1], firstFrame.shape[0],
-                            firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
+        self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
+        self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+        qimg = QtGui.QImage(self.firstFrame.data, self.firstFrame.shape[1], self.firstFrame.shape[0],
+                            self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
         pixmap = QtGui.QPixmap.fromImage(qimg)
         self.label.setPixmap(pixmap)
 
@@ -170,7 +178,7 @@ class Camera(QtCore.QObject):
         # ROI 처리
         # ret, firstFrame = self.camera.read()
 
-        firstFrame = self.camera.get_frame(self.rescale_value)
+        firstFrame = self.camera.get_frame()
 
 
         # firstFrame= cv2.cvtColor(firstFrame, cv2.COLOR_BGR2GRAY)
@@ -183,7 +191,7 @@ class Camera(QtCore.QObject):
 
         while self.logic:
             # ret, frame = self.camera.read()
-            frame = self.camera.get_frame(self.rescale_value)
+            self.frame = self.camera.get_frame()
             # if not ret:  # 카메라 인식 안될경우
             #     print('camera read error')
             #     return
@@ -192,13 +200,14 @@ class Camera(QtCore.QObject):
             roi_cols = self.default_y + self.h
             roi_rows = self.default_x + self.w
 
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            frame = cv2.resize(frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+            self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+            # frame = cv2.resize(frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+            self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
             if self.buffer_frame is None:
                 firstFrame = cv2.cvtColor(firstFrame, cv2.COLOR_BGR2GRAY)
                 self.buffer_frame = firstFrame[self.default_y:roi_cols, self.default_x:roi_rows]
 
-            self.roi_frame = frame[self.default_y:roi_cols, self.default_x:roi_rows]
+            self.roi_frame = self.frame[self.default_y:roi_cols, self.default_x:roi_rows]
             subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
 
             if self.total_frame == 1:
@@ -209,6 +218,7 @@ class Camera(QtCore.QObject):
             print(subtract_frame)
             # 유휴 상태
             if self.idleMode:
+                print("유휴")
                 if rasp:
                     GPIO.output(idle, GPIO.HIGH)  # rasp인 경우 GPIO 출력
                 self.idleCount += self.loop_time  # 유휴상태 경과 시간 += 루프 간격
@@ -221,8 +231,10 @@ class Camera(QtCore.QObject):
 
             # 일반 감지 모드
             else:
+                print("일반감지모드")
                 threshold = self.buffError * 1.5
                 if subtract_frame > threshold:
+                    print("이상감지")
                     if rasp:
                         GPIO.output(alert, GPIO.HIGH)
                     pygame.mixer.music.play()
@@ -242,7 +254,7 @@ class Camera(QtCore.QObject):
             self.buffer_frame = self.roi_frame  # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
             # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
             self.buffError = subtract_frame
-            bounding_box_frame = frame.copy()
+            bounding_box_frame = self.frame.copy()
             output_frame = cv2.rectangle(bounding_box_frame, (self.default_x, self.default_y),
                                          (self.default_x + self.w, self.default_y + self.h), (0, 255, 0),
                                          thickness=3)
@@ -253,18 +265,11 @@ class Camera(QtCore.QObject):
                                 output_frame.strides[0], QtGui.QImage.Format_Grayscale8)
             pixmap = QtGui.QPixmap.fromImage(qimg)
             self.label.setPixmap(pixmap)
-            #loop = QtCore.QEventLoop()
-            #QtCore.QTimer.singleShot(self.loop_time, loop.quit)  # 이벤트 루트 간격
-            #loop.exec_()
+            # loop = QtCore.QEventLoop()
+            # QtCore.QTimer.singleShot(33, loop.quit)  # 이벤트 루트 간격
+            # loop.exec_()
             # cv2.waitKey(33)
 
-    def quit(self):
-        self.logic = False  # 메인로직 반복 종료
-        if rasp:
-            GPIO.cleanup()
-        win.thread.quit()
-        win.thread.wait(5000)
-        app.quit()  # 앱 최종 종료
 
 
 class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
@@ -323,7 +328,18 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
         self.setOptionButton.clicked.connect(self.setOptionDialog.show)
 
-        self.exitButton.clicked.connect(self.camera.quit)
+        # self.exitButton.clicked.connect(self.camera.quit)
+        self.exitButton.clicked.connect(self.quit)
+
+    def quit(self):
+        self.camera.logic = False  # 메인로직 반복 종료
+        print("종료")
+        if rasp:
+            GPIO.cleanup()
+        win.thread.quit()
+        win.thread.wait(5000)
+        app.quit()  # 앱 최종 종료
+
 
 
 if __name__ == "__main__":
@@ -336,3 +352,4 @@ if __name__ == "__main__":
     win = MainWindow()
     win.show()
     app.exec_()
+
