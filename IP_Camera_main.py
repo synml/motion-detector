@@ -138,6 +138,7 @@ class Camera(QtCore.QObject):
         self.buffError = 0  # 이전 프레임 기준 오차율
         self.idleMode = False  # Flag변수, 이상 감지 후 유휴 상태 돌입
         self.idleTime = 5 # second
+        self.discount = 0
 
 
         # 첫 프레임 gui 라벨 이미지 설정
@@ -219,6 +220,13 @@ class Camera(QtCore.QObject):
             # 유휴 상태
             if self.idleMode:
                 print("유휴")
+                win.statusLabel.setText("유휴 상태")
+
+
+
+                win.idleTimeLcd.display((self.idleInitTime + self.idleTime ) - time.time())
+                self.discount += 1
+
 
                 if rasp:
                     GPIO.output(idle, GPIO.HIGH)  # rasp인 경우 GPIO 출력
@@ -228,6 +236,7 @@ class Camera(QtCore.QObject):
                     if rasp:
                         GPIO.output(idle, GPIO.LOW)  # RASP인 경우 GPIO OFF
                     self.idleMode = False  # 유휴상태 해제
+                    self.discount = 0
 
 
                 # self.idleCount += self.loop_time  # 유휴상태 경과 시간 += 루프 간격
@@ -241,8 +250,12 @@ class Camera(QtCore.QObject):
             # 일반 감지 모드
             else:
                 print("일반감지모드")
+                self.idleInitTime = time.time()
+                win.statusLabel.setText("일반 감지 상태")
+                win.idleTimeLcd.display(0)
                 threshold = self.buffError * 1.3
                 if subtract_frame > threshold:
+
                     print("이상감지")
                     if rasp:
                         GPIO.output(alert, GPIO.HIGH)
@@ -256,7 +269,7 @@ class Camera(QtCore.QObject):
                         "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
 
                     self.idleMode = True
-                    self.idleInitTime = time.time()
+
                     print("진입시간",self.idleInitTime)
                 else:
                     if rasp:
@@ -288,7 +301,7 @@ class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
         self.setupUi(self)
         # self.idleTimeEdit.returnPressed.connect(self.idleTimeEditChanged)
         camera = Camera
-        self.textEdit.setText()
+        self.textEdit.setText("33")
         # self.textEdit.returnPressed.connect(self.idleTimeEditChanged)
         self.buttonBox.clicked.connect(self.idleTimeEditChanged)
 
