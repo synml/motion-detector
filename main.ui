@@ -110,7 +110,7 @@ color: rgb(255, 255, 255);</string>
    <widget class="QLCDNumber" name="idleTimeLcd">
     <property name="geometry">
      <rect>
-      <x>1040</x>
+      <x>1100</x>
       <y>570</y>
       <width>31</width>
       <height>41</height>
@@ -125,7 +125,7 @@ color: rgb(255, 255, 255);</string>
      <rect>
       <x>830</x>
       <y>570</y>
-      <width>201</width>
+      <width>261</width>
       <height>41</height>
      </rect>
     </property>
@@ -137,7 +137,7 @@ color: rgb(255, 255, 255);</string>
      </font>
     </property>
     <property name="text">
-     <string>정상</string>
+     <string>대기</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
