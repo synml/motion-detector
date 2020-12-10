@@ -286,6 +286,14 @@ class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
     def __init__(self):
         super(SubWindow, self).__init__()
         self.setupUi(self)
+        # self.idleTimeEdit.returnPressed.connect(self.idleTimeEditChanged)
+        camera = Camera
+        self.textEdit.setText()
+        # self.textEdit.returnPressed.connect(self.idleTimeEditChanged)
+        self.buttonBox.clicked.connect(self.idleTimeEditChanged)
+
+    def idleTimeEditChanged(self):
+        self.textEdit.setText("qq")
 
     # def showDialog(self):
     #     print("다이얼로그 오픈")
