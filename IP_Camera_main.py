@@ -134,11 +134,11 @@ class Camera(QtCore.QObject):
         self.buffer_frame = None
 
         self.total_frame = 0
-        self.loop_time = 1000  # 프레임 처리 간격 (100 = 0.1초)
+
         self.buffError = 0  # 이전 프레임 기준 오차율
         self.idleMode = False  # Flag변수, 이상 감지 후 유휴 상태 돌입
-        self.maxIdleCount = 50000  # (1000 = 1s ) idleMode가 True일 때 이상 감지를 몇 초 간 안할것인가
-        self.idleCount = 0  # idleMode가 True일 때 이상 감지 누적 시간( idelCount == maxIdelCount 가 되면 idleMode = False )
+        self.idleTime = 5 # second
+
 
         # 첫 프레임 gui 라벨 이미지 설정
 
@@ -219,15 +219,24 @@ class Camera(QtCore.QObject):
             # 유휴 상태
             if self.idleMode:
                 print("유휴")
+
                 if rasp:
                     GPIO.output(idle, GPIO.HIGH)  # rasp인 경우 GPIO 출력
-                self.idleCount += self.loop_time  # 유휴상태 경과 시간 += 루프 간격
+                print("유휴상태 현재시간", time.time())
 
-                if self.idleCount == self.maxIdleCount:  # 유휴상태 경과시간이 유휴시간 임계값에 도달한 경우
+                if self.idleInitTime + self.idleTime <= time.time():
                     if rasp:
                         GPIO.output(idle, GPIO.LOW)  # RASP인 경우 GPIO OFF
-                    self.idleCount = 0  # 유휴상태 경과시간 초기화
                     self.idleMode = False  # 유휴상태 해제
+
+
+                # self.idleCount += self.loop_time  # 유휴상태 경과 시간 += 루프 간격
+                #
+                # if self.idleCount == self.maxIdleCount:  # 유휴상태 경과시간이 유휴시간 임계값에 도달한 경우
+                #     if rasp:
+                #         GPIO.output(idle, GPIO.LOW)  # RASP인 경우 GPIO OFF
+                #     self.idleCount = 0  # 유휴상태 경과시간 초기화
+                #     self.idleMode = False  # 유휴상태 해제
 
             # 일반 감지 모드
             else:
@@ -247,6 +256,8 @@ class Camera(QtCore.QObject):
                         "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
 
                     self.idleMode = True
+                    self.idleInitTime = time.time()
+                    print("진입시간",self.idleInitTime)
                 else:
                     if rasp:
                         GPIO.output(alert, GPIO.LOW)
