@@ -362,6 +362,5 @@ if __name__ == "__main__":
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     app = QtWidgets.QApplication(sys.argv)
     win = MainWindow()
-    win.setFixedSize(1596, 779)
     win.show()
     app.exec_()
