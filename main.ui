@@ -78,7 +78,7 @@ color: rgb(255, 255, 255);</string>
       <x>830</x>
       <y>69</y>
       <width>381</width>
-      <height>541</height>
+      <height>491</height>
      </rect>
     </property>
    </widget>
@@ -106,6 +106,42 @@ color: rgb(255, 255, 255);</string>
     </property>
     <property name="text">
      <string>Set Option</string>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="idleTimeLcd">
+    <property name="geometry">
+     <rect>
+      <x>1040</x>
+      <y>570</y>
+      <width>31</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="digitCount">
+     <number>1</number>
+    </property>
+   </widget>
+   <widget class="QLabel" name="statusLabel">
+    <property name="geometry">
+     <rect>
+      <x>830</x>
+      <y>570</y>
+      <width>201</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>20</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>정상</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
     </property>
    </widget>
   </widget>
