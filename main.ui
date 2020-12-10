@@ -127,6 +127,11 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionQuit">
+   <property name="icon">
+    <iconset>
+     <normalon>res/exit.png</normalon>
+    </iconset>
+   </property>
    <property name="text">
     <string>끝내기(Q)</string>
    </property>
