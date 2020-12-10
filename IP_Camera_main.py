@@ -138,7 +138,7 @@ class Camera(QtCore.QObject):
         self.loop_time = 1000  # 프레임 처리 간격 (100 = 0.1초)
         self.buffError = 0  # 이전 프레임 기준 오차율
         self.idleMode = False  # Flag변수, 이상 감지 후 유휴 상태 돌입
-        self.maxIdleCount = 20000  # (1000 = 1s ) idleMode가 True일 때 이상 감지를 몇 초 간 안할것인가
+        self.maxIdleCount = 50000  # (1000 = 1s ) idleMode가 True일 때 이상 감지를 몇 초 간 안할것인가
         self.idleCount = 0  # idleMode가 True일 때 이상 감지 누적 시간( idelCount == maxIdelCount 가 되면 idleMode = False )
 
         # 첫 프레임 gui 라벨 이미지 설정
@@ -235,7 +235,7 @@ class Camera(QtCore.QObject):
             # 일반 감지 모드
             else:
                 print("일반감지모드")
-                threshold = self.buffError * 1.5
+                threshold = self.buffError * 1.3
                 if subtract_frame > threshold:
                     print("이상감지")
                     if rasp:
