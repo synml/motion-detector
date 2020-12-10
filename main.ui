@@ -201,11 +201,19 @@ color: rgb(255, 255, 255);</string>
    </property>
   </action>
   <action name="actionInformation">
+   <property name="icon">
+    <iconset>
+     <normaloff>res/icon/information.png</normaloff>res/icon/information.png</iconset>
+   </property>
    <property name="text">
     <string>정보</string>
    </property>
   </action>
   <action name="actionPreferences">
+   <property name="icon">
+    <iconset>
+     <normaloff>res/icon/settings.png</normaloff>res/icon/settings.png</iconset>
+   </property>
    <property name="text">
     <string>환경 설정</string>
    </property>
