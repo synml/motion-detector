@@ -360,6 +360,7 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.exitButton.clicked.connect(self.quit)
 
         # 메뉴바 시그널 연결
+        self.actionStart.triggered.connect(self.camera.startVideo)
         self.actionQuit.triggered.connect(self.quit)
 
     def quit(self):
