@@ -50,7 +50,7 @@ class camera():
     def get_first_frame(self):
         firstFrameCap = cv2.VideoCapture(self.rtsp_url)
         _, frame = firstFrameCap.read()
-        return  frame
+        return frame
 
     def end(self):
         # send closure request to process
@@ -63,7 +63,7 @@ class camera():
         cap = cv2.VideoCapture(rtsp_url)
 
         # cap = cv2.VideoCapture(rtsp_url, cv2.CAP_PROP_POS_FRAMES)
-        #cap.set(cv2.CAP_PROP_BUFFERSIZE , 30)
+        # cap.set(cv2.CAP_PROP_BUFFERSIZE , 30)
 
         print("Cam Loaded...")
         run = True
@@ -113,7 +113,6 @@ class camera():
         return cv2.resize(frame, None, fx=percent, fy=percent)
 
 
-
 class Camera(QtCore.QObject):
     def __init__(self, label, textBrowser):
         super(Camera, self).__init__()
@@ -144,12 +143,12 @@ class Camera(QtCore.QObject):
         # 첫 프레임 gui 라벨 이미지 설정
 
         # ret, firstFrame = self.camera.read()
-        #firstFrame = self.camera.get_frame()
+        # firstFrame = self.camera.get_frame()
         # self.firstFrame = self.camera.get_first_frame()
         ret, self.firstFrame = self.firstCamera.read()
 
         self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
-        #self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+        # self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
         qimg = QtGui.QImage(self.firstFrame.data, self.firstFrame.shape[1], self.firstFrame.shape[0],
                             self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
         pixmap = QtGui.QPixmap.fromImage(qimg)
@@ -169,7 +168,6 @@ class Camera(QtCore.QObject):
                 cv2.rectangle(img_draw, (self.default_x, self.default_y), (x, y), (0, 255, 255), 2)
                 cv2.imshow('video', img_draw)
 
-
     def startVideo(self):
         now = time.localtime()
         # textBrowser 이벤트 처리
@@ -178,14 +176,13 @@ class Camera(QtCore.QObject):
         # ROI 처리
         # ret, firstFrame = self.camera.read()
 
-        #firstFrame = self.camera.get_frame()
-
+        # firstFrame = self.camera.get_frame()
 
         # firstFrame= cv2.cvtColor(firstFrame, cv2.COLOR_BGR2GRAY)
-        #firstFrame = cv2.resize(firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+        # firstFrame = cv2.resize(firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
         ret, self.firstFrame = self.firstCamera.read()
-        self.firstFrame= cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
-        #self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+        self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
+        # self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
         cv2.startWindowThread()
         cv2.imshow('video', self.firstFrame)
         cv2.setMouseCallback("video", self.onMouse, param=self.firstFrame)
@@ -205,9 +202,9 @@ class Camera(QtCore.QObject):
 
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             # frame = cv2.resize(frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
-            #self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+            # self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
             if self.buffer_frame is None:
-                #self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
+                # self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
                 self.buffer_frame = self.firstFrame[self.default_y:roi_cols, self.default_x:roi_rows]
 
             self.roi_frame = self.frame[self.default_y:roi_cols, self.default_x:roi_rows]
@@ -274,7 +271,6 @@ class Camera(QtCore.QObject):
             # cv2.waitKey(33)
 
 
-
 class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
     def __init__(self):
         super(SubWindow, self).__init__()
@@ -328,11 +324,11 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.setOptionDialog.moveToThread(self.thread)
 
         self.startButton.clicked.connect(self.camera.startVideo)
-
         self.setOptionButton.clicked.connect(self.setOptionDialog.show)
-
-        # self.exitButton.clicked.connect(self.camera.quit)
         self.exitButton.clicked.connect(self.quit)
+
+        # 메뉴바 시그널 연결
+        self.actionQuit.triggered.connect(self.quit)
 
     def quit(self):
         self.camera.logic = False  # 메인로직 반복 종료
@@ -344,7 +340,6 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         app.quit()  # 앱 최종 종료
 
 
-
 if __name__ == "__main__":
     pygame.init()
     pygame.mixer.init()
@@ -353,6 +348,6 @@ if __name__ == "__main__":
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     app = QtWidgets.QApplication(sys.argv)
     win = MainWindow()
+    win.setFixedSize(1596, 779)
     win.show()
     app.exec_()
-
