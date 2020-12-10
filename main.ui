@@ -7,19 +7,19 @@
     <x>0</x>
     <y>0</y>
     <width>1230</width>
-    <height>680</height>
+    <height>650</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>1230</width>
-    <height>680</height>
+    <height>650</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>1230</width>
-    <height>680</height>
+    <height>650</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -40,7 +40,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Start</string>
+     <string>시작</string>
     </property>
    </widget>
    <widget class="QLabel" name="label">
@@ -91,7 +91,7 @@ color: rgb(255, 255, 255);</string>
      </rect>
     </property>
     <property name="text">
-     <string>Quit</string>
+     <string>종료</string>
     </property>
    </widget>
    <widget class="QPushButton" name="setOptionButton">
@@ -104,7 +104,7 @@ color: rgb(255, 255, 255);</string>
      </rect>
     </property>
     <property name="text">
-     <string>Set Option</string>
+     <string>옵션 설정</string>
     </property>
    </widget>
    <widget class="QLCDNumber" name="idleTimeLcd">
@@ -188,7 +188,6 @@ color: rgb(255, 255, 255);</string>
    <addaction name="menuSetting"/>
    <addaction name="menuHelp"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionQuit">
    <property name="icon">
     <iconset>

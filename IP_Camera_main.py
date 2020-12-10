@@ -341,9 +341,6 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         # 메뉴바 시그널 연결
         self.actionQuit.triggered.connect(self.quit)
 
-        # 상태바 설정
-        self.statusbar.showMessage('Motion Detector')
-
     def quit(self):
         self.camera.logic = False  # 메인로직 반복 종료
         print("종료")
