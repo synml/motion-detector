@@ -225,7 +225,7 @@ if __name__ == '__main__':
 
     main_window = QtWidgets.QMainWindow()
     main_window.setWindowTitle('Motion Detector')
-    main_window.setWindowIcon(QtGui.QIcon('res/icon.png'))
+    main_window.setWindowIcon(QtGui.QIcon('res/icon/motion_detector.png'))
     main_window.setCentralWidget(layout_widget)
     main_window.setGeometry(100, 100, 1280, 400)
     main_window.show()

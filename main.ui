@@ -27,8 +27,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normalon>res/icon.png</normalon>
-   </iconset>
+    <normaloff>res/icon/motion_detector.png</normaloff>res/icon/motion_detector.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QPushButton" name="startButton">
@@ -158,6 +157,7 @@ color: rgb(255, 255, 255);</string>
     <property name="title">
      <string>파일(F)</string>
     </property>
+    <addaction name="actionStart"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -192,8 +192,7 @@ color: rgb(255, 255, 255);</string>
   <action name="actionQuit">
    <property name="icon">
     <iconset>
-     <normalon>res/exit.png</normalon>
-    </iconset>
+     <normaloff>res/icon/exit.png</normaloff>res/icon/exit.png</iconset>
    </property>
    <property name="text">
     <string>끝내기(Q)</string>
@@ -210,6 +209,18 @@ color: rgb(255, 255, 255);</string>
   <action name="actionPreferences">
    <property name="text">
     <string>환경 설정</string>
+   </property>
+  </action>
+  <action name="actionStart">
+   <property name="icon">
+    <iconset>
+     <normaloff>res/icon/start.png</normaloff>res/icon/start.png</iconset>
+   </property>
+   <property name="text">
+    <string>시작(S)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
  </widget>
