@@ -35,88 +35,89 @@ mainUi = uic.loadUiType('main.ui')[0]
 setOptionDialogUi = uic.loadUiType('setOptionDialog.ui')[0]
 
 
-class camera():
-
-    def __init__(self, rtsp_url):
-        # 데이터 프로세스 전송 파이프
-        self.rtsp_url = rtsp_url
-        self.parent_conn, child_conn = mp.Pipe()
-        # load process
-        self.p = mp.Process(target=self.update, args=(child_conn, rtsp_url))
-        # start process
-        self.p.daemon = True
-        self.p.start()
-
-    def get_first_frame(self):
-        firstFrameCap = cv2.VideoCapture(self.rtsp_url)
-        _, frame = firstFrameCap.read()
-        return frame
-
-    def end(self):
-        # 프로세스 종료 요청
-        self.parent_conn.send(2)
-
-    def update(self, conn, rtsp_url):
-        # load cam into seperate process
-        print("카메라 로드 중")
-        # cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
-        cap = cv2.VideoCapture(rtsp_url)
-
-        # 버퍼 지정
-        # cap.set(cv2.CAP_PROP_BUFFERSIZE , 30)
-
-        print("카메라 로드 완료")
-        run = True
-
-        while run:
-            # 버퍼에서 카메라 데이터 수신
-            cap.grab()
-
-            # 입력 데이터 수신
-            rec_dat = conn.recv()
-
-            if rec_dat == 1:
-                # 프레임 수신 완료했을 경우
-                ret, frame = cap.read()
-                conn.send(frame)
-
-            elif rec_dat == 2:
-                # 요청이 없는 경우
-                cap.release()
-                run = False
-
-        print("Camera Connection Closed")
-        conn.close()
-
-    def get_frame(self, resize=None):
-        #카메라 연결 프로세스에서 프레임 수신하는데 사용
-        # resize 값 50% 증가인 경우 1.5
-
-        # send request
-        self.parent_conn.send(1)
-        frame = self.parent_conn.recv()
-
-        # reset request
-        self.parent_conn.send(0)
-
-        # resize if needed
-        if resize == None:
-            return frame
-        else:
-            print("리사이즈")
-            return self.rescale_frame(frame, resize)
-
-    def rescale_frame(self, frame, percent=65):
-
-        return cv2.resize(frame, None, fx=percent, fy=percent)
+# class camera():
+#
+#     def __init__(self, rtsp_url):
+#         # 데이터 프로세스 전송 파이프
+#         self.rtsp_url = rtsp_url
+#         self.parent_conn, child_conn = mp.Pipe()
+#         # load process
+#         self.p = mp.Process(target=self.update, args=(child_conn, rtsp_url))
+#         # start process
+#         self.p.daemon = True
+#         self.p.start()
+#
+#     def get_first_frame(self):
+#         firstFrameCap = cv2.VideoCapture(self.rtsp_url)
+#         _, frame = firstFrameCap.read()
+#         return frame
+#
+#     def end(self):
+#         # 프로세스 종료 요청
+#         self.parent_conn.send(2)
+#
+#     def update(self, conn, rtsp_url):
+#         # load cam into seperate process
+#         print("카메라 로드 중")
+#         # cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
+#         cap = cv2.VideoCapture(rtsp_url)
+#
+#         # 버퍼 지정
+#         # cap.set(cv2.CAP_PROP_BUFFERSIZE , 30)
+#
+#         print("카메라 로드 완료")
+#         run = True
+#
+#         while run:
+#             # 버퍼에서 카메라 데이터 수신
+#             cap.grab()
+#
+#             # 입력 데이터 수신
+#             rec_dat = conn.recv()
+#
+#             if rec_dat == 1:
+#                 # 프레임 수신 완료했을 경우
+#                 ret, frame = cap.read()
+#                 conn.send(frame)
+#
+#             elif rec_dat == 2:
+#                 # 요청이 없는 경우
+#                 cap.release()
+#                 run = False
+#
+#         print("Camera Connection Closed")
+#         conn.close()
+#
+#     def get_frame(self, resize=None):
+#         #카메라 연결 프로세스에서 프레임 수신하는데 사용
+#         # resize 값 50% 증가인 경우 1.5
+#
+#         # send request
+#         self.parent_conn.send(1)
+#         frame = self.parent_conn.recv()
+#
+#         # reset request
+#         self.parent_conn.send(0)
+#
+#         # resize if needed
+#         if resize == None:
+#             return frame
+#         else:
+#             print("리사이즈")
+#             return self.rescale_frame(frame, resize)
+#
+#     def rescale_frame(self, frame, percent=65):
+#
+#         return cv2.resize(frame, None, fx=percent, fy=percent)
 
 
 class Camera(QtCore.QObject):
     def __init__(self, label, textBrowser):
         super(Camera, self).__init__()
-        # self.camera = cv2.VideoCapture(0)
-        self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.100:554/test/media.smp')
-        self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.100:554/test/media.smp')
+        self.camera = cv2.VideoCapture(0)
+
+        # self.firstCamera = cv2.VideoCapture(0)
+        #self.camera = camera(0)
         self.rescale_value = None
 
         self.label = label
@@ -144,10 +145,10 @@ class Camera(QtCore.QObject):
         # ret, firstFrame = self.camera.read()
         # firstFrame = self.camera.get_frame()
         # self.firstFrame = self.camera.get_first_frame()
-        ret, self.firstFrame = self.firstCamera.read()
+        ret, self.firstFrame = self.camera.read()
 
         self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
-        # self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+        self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
         qimg = QtGui.QImage(self.firstFrame.data, self.firstFrame.shape[1], self.firstFrame.shape[0],
                             self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
         pixmap = QtGui.QPixmap.fromImage(qimg)
@@ -179,18 +180,19 @@ class Camera(QtCore.QObject):
 
         # firstFrame= cv2.cvtColor(firstFrame, cv2.COLOR_BGR2GRAY)
         # firstFrame = cv2.resize(firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
-        ret, self.firstFrame = self.firstCamera.read()
-        self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
-        # self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
-        cv2.startWindowThread()
-        cv2.imshow('video', self.firstFrame)
-        cv2.setMouseCallback("video", self.onMouse, param=self.firstFrame)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        ret, self.frame = self.camera.read()
+        if ret:
+            self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+            self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+            cv2.startWindowThread()
+            cv2.imshow('video', self.frame)
+            cv2.setMouseCallback("video", self.onMouse, param=self.frame)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
         while self.logic:
-            # ret, frame = self.camera.read()
-            self.frame = self.camera.get_frame()
+            ret, self.frame = self.camera.read()
+            # self.frame = self.camera.get_frame()
             # if not ret:  # 카메라 인식 안될경우
             #     print('camera read error')
             #     return
@@ -200,11 +202,11 @@ class Camera(QtCore.QObject):
             roi_rows = self.default_x + self.w
 
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-            # frame = cv2.resize(frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+            self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
             # self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
             if self.buffer_frame is None:
                 # self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
-                self.buffer_frame = self.firstFrame[self.default_y:roi_cols, self.default_x:roi_rows]
+                self.buffer_frame = self.frame[self.default_y:roi_cols, self.default_x:roi_rows]
 
             self.roi_frame = self.frame[self.default_y:roi_cols, self.default_x:roi_rows]
             subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
@@ -214,10 +216,10 @@ class Camera(QtCore.QObject):
 
             # cv2.imshow('roi', self.buffer_Frame)
             # print(subtract_frame)
-            print(subtract_frame)
+            print(self.total_frame, "   ", subtract_frame)
             # 유휴 상태
             if self.idleMode:
-                print("유휴")
+
                 win.statusLabel.setText("유휴 상태")
 
 
@@ -228,7 +230,7 @@ class Camera(QtCore.QObject):
 
                 if rasp:
                     GPIO.output(idle, GPIO.HIGH)  # rasp인 경우 GPIO 출력
-                print("유휴상태 현재시간", time.time())
+
 
                 if self.idleInitTime + self.idleTime <= time.time():
                     if rasp:
@@ -281,7 +283,7 @@ class Camera(QtCore.QObject):
                                          (self.default_x + self.w, self.default_y + self.h), (0, 255, 0),
                                          thickness=3)
 
-            # img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) 
             # h, w, c = img.shape
             qimg = QtGui.QImage(output_frame.data, label_w, label_h,
                                 output_frame.strides[0], QtGui.QImage.Format_Grayscale8)
@@ -290,7 +292,7 @@ class Camera(QtCore.QObject):
             # loop = QtCore.QEventLoop()
             # QtCore.QTimer.singleShot(33, loop.quit)  # 이벤트 루트 간격
             # loop.exec_()
-            # cv2.waitKey(33)
+            cv2.waitKey(500)
 
 
 class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
@@ -298,7 +300,7 @@ class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
         super(SubWindow, self).__init__()
         self.setupUi(self)
         # self.idleTimeEdit.returnPressed.connect(self.idleTimeEditChanged)
-        camera = Camera
+
         self.textEdit.setText("33")
         # self.textEdit.returnPressed.connect(self.idleTimeEditChanged)
         self.buttonBox.clicked.connect(self.idleTimeEditChanged)
@@ -344,22 +346,22 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
         self.thread = QtCore.QThread()
         self.thread.start()
-        self.thread2 = QtCore.QThread()
-        self.thread2.start()
+        # self.thread2 = QtCore.QThread()
+        # self.thread2.start()
 
         self.camera = Camera(self.label, self.textBrowser)
         self.camera.moveToThread(self.thread)
 
         self.setOptionDialog = SubWindow()
-        self.setOptionDialog.moveToThread(self.thread)
+        # self.setOptionDialog.moveToThread(self.thread2)
 
         self.startButton.clicked.connect(self.camera.startVideo)
         self.setOptionButton.clicked.connect(self.setOptionDialog.show)
         self.exitButton.clicked.connect(self.quit)
 
         # 메뉴바 시그널 연결
-        self.actionStart.triggered.connect(self.camera.startVideo)
-        self.actionQuit.triggered.connect(self.quit)
+        #self.actionStart.triggered.connect(self.camera.startVideo)
+        #self.actionQuit.triggered.connect(self.quit)
 
     def quit(self):
         self.camera.logic = False  # 메인로직 반복 종료
