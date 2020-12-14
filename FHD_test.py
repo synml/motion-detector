@@ -135,6 +135,7 @@ class Camera(QtCore.QObject):
         self.idleMode = False  # Flag변수, 이상 감지 후 유휴 상태 돌입
         self.idleTime = 5 # second
         self.discount = 0
+        self.threshold = 1.4
 
 
         # 첫 프레임 gui 라벨 이미지 설정
@@ -225,8 +226,8 @@ class Camera(QtCore.QObject):
                 self.idleInitTime = time.time()
                 win.statusLabel.setText("일반 감지 상태")
                 win.idleTimeLcd.display(0)
-                threshold = self.buffError * 1.2
-                if subtract_frame > threshold and self.total_frame >= 3:
+                #threshold = self.buffError * self.threshold
+                if subtract_frame > self.buffError * self.threshold and self.total_frame >= 3:
 
 
                     print("이상감지")
@@ -267,15 +268,31 @@ class Camera(QtCore.QObject):
 
 
 
+
+
 class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
     def __init__(self):
         super(SubWindow, self).__init__()
+
         self.setupUi(self)
-        self.textEdit.setText("33")
+
         self.buttonBox.clicked.connect(self.idleTimeEditChanged)
 
+        self.threshold.valueChanged.connect(self.thresholdSliderMoved) # 민감도 슬라이더 움직일 때
+        self.thresholdLCD.display(1)
+        self.textEdit.setText(str(10))
+
+    def thresholdSliderMoved(self):
+
+        win.camera.threshold = 1 + (0.05 * self.threshold.value())
+        self.thresholdLCD.display(self.threshold.value())
+        print(win.camera.threshold)
+
     def idleTimeEditChanged(self):
-        self.textEdit.setText("qq")
+        # self.textEdit.setText("qq")
+        win.camera.idleTime = int(self.textEdit.toPlainText())
+        win.camera.threshold = 1 + (0.05 * self.threshold.value())
+
 
 
 
@@ -290,6 +307,7 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.thread2.start()
 
         self.camera = Camera(self.label, self.textBrowser)
+
         self.camera.moveToThread(self.thread)
 
         self.setOptionDialog = SubWindow()
