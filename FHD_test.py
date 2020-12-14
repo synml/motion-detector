@@ -115,8 +115,8 @@ class Camera(QtCore.QObject):
     def __init__(self, label, textBrowser):
         super(Camera, self).__init__()
         # self.camera = cv2.VideoCapture(0)
-        self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.5:554/test/media.smp')
-        self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.5:554/test/media.smp')
+        self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.5:554/fhd/media.smp')
+        self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.5:554/fhd/media.smp')
         self.rescale_value = None
 
         self.label = label
@@ -140,7 +140,7 @@ class Camera(QtCore.QObject):
         # 첫 프레임 gui 라벨 이미지 설정
         ret, self.firstFrame = self.firstCamera.read()
         self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
-        # self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+        self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
         qimg = QtGui.QImage(self.firstFrame.data, self.firstFrame.shape[1], self.firstFrame.shape[0],
                             self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
         pixmap = QtGui.QPixmap.fromImage(qimg)
@@ -166,10 +166,9 @@ class Camera(QtCore.QObject):
         self.textBrowser.append("감지 시작: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
                                 "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
         # ROI 처리
-        # firstFrame = cv2.resize(firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
         ret, self.firstFrame = self.firstCamera.read()
         self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
-        # self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+        self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
         cv2.startWindowThread()
         cv2.imshow('video', self.firstFrame)
         cv2.setMouseCallback("video", self.onMouse, param=self.firstFrame)
@@ -188,13 +187,16 @@ class Camera(QtCore.QObject):
             roi_rows = self.default_x + self.w
 
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-            # self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+            self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
             if self.buffer_frame is None:
                 # self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
                 self.buffer_frame = self.firstFrame[self.default_y:roi_cols, self.default_x:roi_rows]
 
             self.roi_frame = self.frame[self.default_y:roi_cols, self.default_x:roi_rows]
+
+
             subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
+            # subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame))))  # L2 DISTANCE
 
             if self.total_frame == 1:
                 self.buffError = subtract_frame
@@ -223,8 +225,9 @@ class Camera(QtCore.QObject):
                 self.idleInitTime = time.time()
                 win.statusLabel.setText("일반 감지 상태")
                 win.idleTimeLcd.display(0)
-                threshold = self.buffError * 1.4
+                threshold = self.buffError * 1.2
                 if subtract_frame > threshold and self.total_frame >= 3:
+
 
                     print("이상감지")
                     if rasp:
