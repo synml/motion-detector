@@ -117,8 +117,8 @@ class Camera(QtCore.QObject):
     def __init__(self, label, textBrowser):
         super(Camera, self).__init__()
         # self.camera = cv2.VideoCapture(0)
-        self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.100:554/test/media.smp')
-        self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.100:554/test/media.smp')
+        self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.5:554/test/media.smp')
+        self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.5:554/test/media.smp')
         self.rescale_value = None
 
         self.label = label
@@ -292,7 +292,7 @@ class Camera(QtCore.QObject):
             # loop = QtCore.QEventLoop()
             # QtCore.QTimer.singleShot(33, loop.quit)  # 이벤트 루트 간격
             # loop.exec_()
-            # cv2.waitKey(33)
+
 
 
 class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
