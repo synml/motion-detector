@@ -114,9 +114,9 @@ class camera():
 class Camera(QtCore.QObject):
     def __init__(self, label, textBrowser):
         super(Camera, self).__init__()
-        # self.camera = cv2.VideoCapture(0)
-        self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
-        self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
+        self.firstCamera = cv2.VideoCapture('sampleVideo.mp4')
+        # self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
+        # self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
         self.rescale_value = None
 
         self.label = label
@@ -136,6 +136,7 @@ class Camera(QtCore.QObject):
         self.idleTime = 5 # second
         self.discount = 0
         self.threshold = 1.4
+        self.exception = False
 
 
         # 첫 프레임 gui 라벨 이미지 설정
@@ -167,18 +168,17 @@ class Camera(QtCore.QObject):
         self.textBrowser.append("감지 시작: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
                                 "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
         # ROI 처리
-        ret, self.firstFrame = self.firstCamera.read()
-        self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
-        self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+        ret, self.setRoiFrame = self.firstCamera.read()
+        self.setRoiFrame = cv2.cvtColor(self.setRoiFrame, cv2.COLOR_BGR2GRAY)
         cv2.startWindowThread()
         cv2.imshow('video', self.firstFrame)
-        cv2.setMouseCallback("video", self.onMouse, param=self.firstFrame)
+        cv2.setMouseCallback("video", self.onMouse, param=self.setRoiFrame)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
         while self.logic:
             # ret, frame = self.camera.read()
-            self.frame = self.camera.get_frame()
+            ret, self.frame = self.firstCamera.read()
             if not ret:  # 카메라 인식 안될경우
                 print('camera read error')
                 return
@@ -188,15 +188,21 @@ class Camera(QtCore.QObject):
             roi_rows = self.default_x + self.w
 
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-            self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+            #self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
             if self.buffer_frame is None:
                 # self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
-                self.buffer_frame = self.firstFrame[self.default_y:roi_cols, self.default_x:roi_rows]
+                self.buffer_frame = self.setRoiFrame[self.default_y:roi_cols, self.default_x:roi_rows]
 
             self.roi_frame = self.frame[self.default_y:roi_cols, self.default_x:roi_rows]
 
 
-            subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
+            subtract_frame = np.round(np.sqrt(np.sum(np.abs(self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
+
+            # subtract_frame = np.round(np.sqrt(np.sum((self.roi_frame - self.buffer_frame) ** 2)))  # L2 DISTANCE
+            #np.savetxt('nparray/' + str(self.total_frame) + '_roi', np.round(self.roi_frame), fmt='%.1e')
+            # np.savetxt('nparray/' + str(self.total_frame) + '_buffer', np.round(self.buffer_frame), fmt='%.1e')
+            # np.savetxt('nparray/' + str(self.total_frame) + '_subtract', np.round(self.buffer_frame-self.roi_frame), fmt='%.1e')
+
             # subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame))))  # L2 DISTANCE
 
             if self.total_frame == 1:
@@ -212,7 +218,7 @@ class Camera(QtCore.QObject):
 
                 if rasp:
                     GPIO.output(idle, GPIO.HIGH)  # rasp인 경우 GPIO 출력
-                print("유휴상태 현재시간", time.time())
+                # print("유휴상태 현재시간", time.time())
 
                 if self.idleInitTime + self.idleTime <= time.time():
                     if rasp:
@@ -229,33 +235,47 @@ class Camera(QtCore.QObject):
                 #threshold = self.buffError * self.threshold
                 if subtract_frame > self.buffError * self.threshold and self.total_frame >= 3:
 
+                    if self.exception :
+                        self.exception=False
+                        #np.savetxt('nparray/'+ str(self.total_frame) + '_error' , self.roi_frame, fmt='%.1e')
 
-                    print("이상감지")
-                    if rasp:
-                        GPIO.output(alert, GPIO.HIGH)
-                    pygame.mixer.music.play()
-                    # self.buffer_frame = roi_frame
+                        print("이상감지")
+                        if rasp:
+                            GPIO.output(alert, GPIO.HIGH)
+                        pygame.mixer.music.play()
+                        # self.buffer_frame = roi_frame
 
-                    # textBrowser에 로그 기록
-                    now = time.localtime()
-                    self.textBrowser.append(
-                        "이상 감지: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
-                        "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
+                        # textBrowser에 로그 기록
+                        now = time.localtime()
+                        self.textBrowser.append(
+                            "이상 감지: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
+                            "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
 
-                    self.idleMode = True
+                        self.idleMode = True
 
-                    print("진입시간",self.idleInitTime)
+                        print("진입시간",self.idleInitTime)
+
+                    if self.exception == False:
+                        self.exception = True
+
+
+
                 else:
+                    self.exception = False
                     if rasp:
                         GPIO.output(alert, GPIO.LOW)
+
+            #np.savetxt('nparray/' + str(self.total_frame) + '_ok', self.roi_frame, fmt='%.1e')
 
             self.buffer_frame = self.roi_frame  # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
             # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
             self.buffError = subtract_frame
             bounding_box_frame = self.frame.copy()
+
             output_frame = cv2.rectangle(bounding_box_frame, (self.default_x, self.default_y),
                                          (self.default_x + self.w, self.default_y + self.h), (0, 255, 0),
                                          thickness=3)
+            output_frame = cv2.resize(output_frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
 
 
             qimg = QtGui.QImage(output_frame.data, label_w, label_h,
@@ -263,8 +283,9 @@ class Camera(QtCore.QObject):
             pixmap = QtGui.QPixmap.fromImage(qimg)
             self.label.setPixmap(pixmap)
             # loop = QtCore.QEventLoop()
-            # QtCore.QTimer.singleShot(33, loop.quit)  # 이벤트 루트 간격
+            # QtCore.QTimer.singleShot(1, loop.quit)  # 이벤트 루트 간격
             # loop.exec_()
+            cv2.waitKey(33)
 
 
 
