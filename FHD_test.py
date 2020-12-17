@@ -27,6 +27,8 @@ except ModuleNotFoundError:
 라벨 크기 : 800(w 너비)  600(h 높이)
 
 """
+idleTime = 10  # second
+threshold = 1.4
 
 label_w = 800
 label_h = 600
@@ -112,30 +114,26 @@ class camera():
 
 
 class Camera(QtCore.QObject):
+    idleTime = 5
     def __init__(self, label, textBrowser):
         super(Camera, self).__init__()
         # self.camera = cv2.VideoCapture(0)
         # self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
         self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
         self.rescale_value = None
-
         self.label = label
-
         self.textBrowser = textBrowser
         self.label.resize(label_w, label_h)
-
         self.logic = True  # 반복 루프 제어
-
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
         self.buffer_frame = None
-
         self.total_frame = 0
-
         self.buffError = None  # 이전 프레임 기준 오차율
         self.idleMode = False  # Flag변수, 이상 감지 후 유휴 상태 돌입
-        self.idleTime = 5 # second
-        self.discount = 0
-        self.threshold = 1.4
+        global idleTime, threshold
+        self.idleTime = idleTime
+        #self.discount = 0
+        self.threshold = threshold
 
 
         # 첫 프레임 gui 라벨 이미지 설정
@@ -160,58 +158,54 @@ class Camera(QtCore.QObject):
             if self.w > 0 and self.h > 0:
                 img_draw = param.copy()
                 cv2.rectangle(img_draw, (self.default_x, self.default_y), (x, y), (0, 255, 255), 2)
-                cv2.imshow('video', img_draw)
+                cv2.imshow('Set RoI', img_draw)
+
+    def setRoI(self, frame):
+        cv2.startWindowThread()
+        cv2.imshow('Set RoI', frame)
+        cv2.setMouseCallback("Set RoI", self.onMouse, param=frame)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
 
     def startVideo(self):
+        self.setRoI(self.firstFrame)
+
+
+    def loop(self):
         now = time.localtime()
         # textBrowser 이벤트 처리
         self.textBrowser.append("감지 시작: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
                                 "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
         # ROI 처리
-        #ret, self.firstFrame = self.firstCamera.read()
-        #self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
-        #self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
-        cv2.startWindowThread()
-        cv2.imshow('video', self.firstFrame)
-        cv2.setMouseCallback("video", self.onMouse, param=self.firstFrame)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        if self.default_x == -1: self.setRoI(self.firstFrame)
 
         while self.logic:
-            # ret, frame = self.camera.read()
             self.frame = self.camera.get_frame()
-            # if not ret:  # 카메라 인식 안될경우
-            #     print('camera read error')
-            #     return
-
             self.total_frame += 1
-            #roi_cols = self.default_y + self.h
-            #roi_rows = self.default_x + self.w
 
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
-            if self.buffer_frame is None:
-                # self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
+
+            if self.buffer_frame is None: # 첫 프레임인 경우에
                 self.buffer_frame = self.firstFrame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
 
             self.roi_frame = self.frame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
 
 
-            subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
-            # subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame))))  # L2 DISTANCE
-
-            # if self.total_frame == 1:
-            #     self.buffError = subtract_frame
+            subtract_frame = np.round(np.sqrt(np.sum(np.abs(self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
+            # subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
+            print(subtract_frame)
 
             if self.buffError is None: self.buffError = subtract_frame
 
-            # print(subtract_frame)
+
             # 유휴 상태
             if self.idleMode:
                 # print("유휴")
                 win.statusLabel.setText("유휴 상태")
                 win.idleTimeLcd.display((self.idleInitTime + self.idleTime ) - time.time())
-                self.discount += 1
+                #self.discount += 1
 
                 if rasp:
                     GPIO.output(idle, GPIO.HIGH)  # rasp인 경우 GPIO 출력
@@ -221,7 +215,7 @@ class Camera(QtCore.QObject):
                     if rasp:
                         GPIO.output(idle, GPIO.LOW)  # RASP인 경우 GPIO OFF
                     self.idleMode = False  # 유휴상태 해제
-                    self.discount = 0
+                    #self.discount = 0
 
             # 일반 감지 모드
             else:
@@ -278,21 +272,25 @@ class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
         super(SubWindow, self).__init__()
 
         self.setupUi(self)
-
         self.buttonBox.clicked.connect(self.idleTimeEditChanged)
-
         self.threshold.valueChanged.connect(self.thresholdSliderMoved) # 민감도 슬라이더 움직일 때
-        self.thresholdLCD.display(1)
-        self.textEdit.setText(str(10))
+
+        self.init()
+
+    def init(self):
+
+        #self.threshold.setValue(((threshold-1)/0.05))
+        self.thresholdLCD.display((threshold-1)/0.05)
+        self.textEdit.setText(str(idleTime))
 
     def thresholdSliderMoved(self):
 
         win.camera.threshold = 1 + (0.05 * self.threshold.value())
         self.thresholdLCD.display(self.threshold.value())
-        print(win.camera.threshold)
+
 
     def idleTimeEditChanged(self):
-        # self.textEdit.setText("qq")
+
         win.camera.idleTime = int(self.textEdit.toPlainText())
         win.camera.threshold = 1 + (0.05 * self.threshold.value())
 
@@ -316,12 +314,15 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.setOptionDialog = SubWindow()
         self.setOptionDialog.moveToThread(self.thread)
 
-        self.startButton.clicked.connect(self.camera.startVideo)
+
+        # 카메라
+
+        self.startButton.clicked.connect(self.camera.loop)
         self.setOptionButton.clicked.connect(self.setOptionDialog.show)
         self.exitButton.clicked.connect(self.quit)
 
         # 메뉴바 시그널 연결
-        self.actionStart.triggered.connect(self.camera.startVideo)
+        self.actionStart.triggered.connect(self.camera.loop)
         self.actionQuit.triggered.connect(self.quit)
 
     def quit(self):
