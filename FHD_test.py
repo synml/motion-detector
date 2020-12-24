@@ -1,12 +1,10 @@
+import multiprocessing as mp
 import sys
 import time
 
 import cv2
 import numpy as np
 import pygame
-
-import multiprocessing as mp
-
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5 import uic
 
@@ -51,8 +49,7 @@ class IPCamera:
         self.p.start()
 
     def get_first_frame(self):
-        firstFrameCap = cv2.VideoCapture(self.rtsp_url)
-        _, frame = firstFrameCap.read()
+        _, frame = cv2.VideoCapture(self.rtsp_url).read()
         return frame
 
     def end(self):
@@ -60,17 +57,12 @@ class IPCamera:
         self.parent_conn.send(2)
 
     def update(self, conn, rtsp_url):
-        # load cam into seperate process
+        # load cam into separate process
         print("카메라 로드 중")
-        # cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
         cap = cv2.VideoCapture(rtsp_url)
-
-        # 버퍼 지정
-        # cap.set(cv2.CAP_PROP_BUFFERSIZE , 30)
-
         print("카메라 로드 완료")
-        run = True
 
+        run = True
         while run:
             # 버퍼에서 카메라 데이터 수신
             cap.grab()
@@ -107,10 +99,7 @@ class IPCamera:
             return frame
         else:
             print("리사이즈")
-            return self.rescale_frame(frame, resize)
-
-    def rescale_frame(self, frame, percent=65):
-        return cv2.resize(frame, None, fx=percent, fy=percent)
+            return cv2.resize(frame, None, fx=resize, fy=resize)
 
 
 class MotionDetector(QtCore.QObject):
@@ -122,10 +111,8 @@ class MotionDetector(QtCore.QObject):
         # self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
         # self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/fhd/media.smp') #연구실꺼 4
 
-        self.camera = IPCamera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')  # 재승이형꺼
-        self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')
+        self.ip_camera = IPCamera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')  # 재승이형꺼
 
-        self.rescale_value = None
         self.label = label
         self.textBrowser = textBrowser
         self.label.resize(label_w, label_h)
@@ -137,23 +124,17 @@ class MotionDetector(QtCore.QObject):
         self.idleMode = False  # Flag변수, 이상 감지 후 유휴 상태 돌입
         global idleTime, threshold
         self.idleTime = idleTime
-        # self.discount = 0
         self.threshold = threshold
         self.fps = 1
 
         # 첫 프레임 gui 라벨 이미지 설정
-        # ret, self.firstFrame = self.firstCamera.read()
-        # self.frame = self.camera.get_frame()
-        _, self.frame = self.firstCamera.read()
-
-        self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+        self.frame = cv2.cvtColor(self.ip_camera.get_first_frame(), cv2.COLOR_BGR2GRAY)
         self.firstFrame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
 
         # qimg = QtGui.QImage(self.firstFrame.data, self.firstFrame.shape[1], self.firstFrame.shape[0],
-
-    #                            self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
-    # pixmap = QtGui.QPixmap.fromImage(qimg)
-    # self.label.setPixmap(pixmap)
+        #                     self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
+        # pixmap = QtGui.QPixmap.fromImage(qimg)
+        # self.label.setPixmap(pixmap)
 
     def onMouse(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -189,7 +170,7 @@ class MotionDetector(QtCore.QObject):
 
         while self.logic:
 
-            self.frame = self.camera.get_frame()
+            self.frame = self.ip_camera.get_frame()
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             current_time = time.time() - previous_time
 
@@ -286,8 +267,8 @@ class MotionDetector(QtCore.QObject):
 class SetOptionDialog(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
     def __init__(self):
         super(SetOptionDialog, self).__init__()
-
         self.setupUi(self)
+
         self.buttonBox.clicked.connect(self.idleTimeEditChanged)
         self.threshold.valueChanged.connect(self.thresholdSliderMoved)  # 민감도 슬라이더 움직일 때
         self.fps.valueChanged.connect(self.fpsSliderMoved)
@@ -295,7 +276,6 @@ class SetOptionDialog(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
         self.init()
 
     def init(self):
-        # self.threshold.setValue(((threshold-1)/0.05))
         self.thresholdLCD.display((threshold - 1) / 0.05)
         self.textEdit.setText(str(idleTime))
 
