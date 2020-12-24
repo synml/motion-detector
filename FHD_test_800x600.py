@@ -12,11 +12,10 @@ from PyQt5 import uic
 
 try:
     import RPi.GPIO as GPIO
-    GPIO.setMode(GPIO.BCM)
+
     rasp = True
     idle = 25
     alert = 24
-    GPIO.setup(alert, GPIO.OUT)
 except ModuleNotFoundError:
     rasp = False
     idle = 25
@@ -24,10 +23,9 @@ except ModuleNotFoundError:
 
 """
 전역 설정란
-
 라벨 크기 : 800(w 너비)  600(h 높이)
-
 """
+
 idleTime = 10  # second
 threshold = 1.4
 
@@ -123,8 +121,8 @@ class Camera(QtCore.QObject):
         # self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
         # self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/fhd/media.smp') #연구실꺼 4
 
-        self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp') # 재승이형꺼
-        self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')
+        self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.100:554/test/media.smp') # 재승이형꺼
+
 
         self.rescale_value = None
         self.label = label
@@ -140,21 +138,17 @@ class Camera(QtCore.QObject):
         self.idleTime = idleTime
         #self.discount = 0
         self.threshold = threshold
-        self.fps = 1
 
 
         # 첫 프레임 gui 라벨 이미지 설정
         # ret, self.firstFrame = self.firstCamera.read()
-        #self.frame = self.camera.get_frame()
-        _, self.frame = self.firstCamera.read()
-
-        self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-        self.firstFrame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
-
-        #qimg = QtGui.QImage(self.firstFrame.data, self.firstFrame.shape[1], self.firstFrame.shape[0],
-#                            self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
-        #pixmap = QtGui.QPixmap.fromImage(qimg)
-        #self.label.setPixmap(pixmap)
+        self.firstFrame = self.camera.get_frame()
+        self.firstFrame = cv2.cvtColor(self.firstFrame, cv2.COLOR_BGR2GRAY)
+        self.firstFrame = cv2.resize(self.firstFrame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+        qimg = QtGui.QImage(self.firstFrame.data, self.firstFrame.shape[1], self.firstFrame.shape[0],
+                            self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
+        pixmap = QtGui.QPixmap.fromImage(qimg)
+        self.label.setPixmap(pixmap)
 
     def onMouse(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -178,103 +172,94 @@ class Camera(QtCore.QObject):
         cv2.destroyAllWindows()
 
 
+    def startVideo(self):
+        self.setRoI(self.firstFrame)
+
+
     def loop(self):
         now = time.localtime()
         # textBrowser 이벤트 처리
         self.textBrowser.append("감지 시작: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
                                 "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
         # ROI 처리
-        print("frame", self.frame.shape
-              )
-        if self.default_x == -1: self.setRoI(self.frame)
-
-        previous_time = time.time()
+        if self.default_x == -1: self.setRoI(self.firstFrame)
 
         while self.logic:
 
             self.frame = self.camera.get_frame()
+            self.total_frame += 1
+
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-            current_time = time.time() - previous_time
+            self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
 
-            if current_time > 1. / self.fps:
-                previous_time = time.time()
-                self.total_frame += 1
+            if self.buffer_frame is None: # 첫 프레임인 경우에
+                self.buffer_frame = self.firstFrame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
+
+            self.roi_frame = self.frame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
 
 
-                #self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+            subtract_frame = np.round(np.sqrt(np.sum(np.abs(self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
+            # subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
+            print(subtract_frame)
 
-                if self.buffer_frame is None: # 첫 프레임인 경우에
-                    self.buffer_frame = self.frame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
+            if self.buffError is None: self.buffError = subtract_frame
 
-                self.roi_frame = self.frame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
-                print(self.roi_frame.shape)
+            # 유휴 상태
+            if self.idleMode:
+                # print("유휴")
+                win.statusLabel.setText("유휴 상태")
+                win.idleTimeLcd.display((self.idleInitTime + self.idleTime ) - time.time())
+                #self.discount += 1
 
-                subtract_frame = np.round(np.sqrt(np.sum(np.abs(self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
-                # subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
-                print(subtract_frame)
+                if rasp:
+                    GPIO.output(idle, GPIO.HIGH)  # rasp인 경우 GPIO 출력
+                # print("유휴상태 현재시간", time.time())
 
-                if self.buffError is None: self.buffError = subtract_frame
-
-                # 유휴 상태
-                if self.idleMode:
-                    # print("유휴")
-                    win.statusLabel.setText("유휴 상태")
-                    win.idleTimeLcd.display((self.idleInitTime + self.idleTime ) - time.time())
-                    #self.discount += 1
-
+                if self.idleInitTime + self.idleTime <= time.time():
                     if rasp:
-                        GPIO.output(idle, GPIO.HIGH)  # rasp인 경우 GPIO 출력
-                    # print("유휴상태 현재시간", time.time())
+                        GPIO.output(idle, GPIO.LOW)  # RASP인 경우 GPIO OFF
+                    self.idleMode = False  # 유휴상태 해제
+                    #self.discount = 0
 
-                    if self.idleInitTime + self.idleTime <= time.time():
-                        if rasp:
-                            GPIO.output(idle, GPIO.LOW)  # RASP인 경우 GPIO OFF
-                        self.idleMode = False  # 유휴상태 해제
-                        #self.discount = 0
+            # 일반 감지 모드
+            else:
+                # print("일반감지모드")
+                self.idleInitTime = time.time()
+                win.statusLabel.setText("일반 감지 상태")
+                win.idleTimeLcd.display(0)
+                #threshold = self.buffError * self.threshold
 
-                # 일반 감지 모드
+
+                if subtract_frame > self.buffError * self.threshold and self.total_frame >= 3:
+                    #np.savetxt("np_save/"+str(self.total_frame)+'_error', self.roi_frame, fmt='%1d')
+
+                    # print("이상감지")
+                    if rasp:
+                        GPIO.output(alert, GPIO.HIGH)
+                    pygame.mixer.music.play()
+                    # self.buffer_frame = roi_frame
+
+                    # textBrowser에 로그 기록
+                    now = time.localtime()
+                    self.textBrowser.append(
+                        "이상 감지: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
+                        "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
+
+                    self.idleMode = True
+
+                    # print("진입시간",self.idleInitTime)
                 else:
-                    # print("일반감지모드")
-                    self.idleInitTime = time.time()
-                    win.statusLabel.setText("일반 감지 상태")
-                    win.idleTimeLcd.display(0)
+                    if rasp:
+                        GPIO.output(alert, GPIO.LOW)
+            #np.savetxt("np_save/" + str(self.total_frame) + 'normal', self.roi_frame, fmt='%1d')
 
-                    #threshold = self.buffError * self.threshold
-
-
-                    if subtract_frame > self.buffError * self.threshold and self.total_frame >= 3:
-                        #np.savetxt("np_save/"+str(self.total_frame)+'_error', self.roi_frame, fmt='%1d')
-
-                        # print("이상감지")
-                        if rasp:
-                            GPIO.output(alert, GPIO.HIGH)
-                        pygame.mixer.music.play()
-                        # self.buffer_frame = roi_frame
-
-                        # textBrowser에 로그 기록
-                        now = time.localtime()
-                        self.textBrowser.append(
-                            "이상 감지: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
-                            "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
-
-                        self.idleMode = True
-
-                        # print("진입시간",self.idleInitTime)
-                    else:
-                        if rasp:
-                            GPIO.output(alert, GPIO.LOW)
-                #np.savetxt("np_save/" + str(self.total_frame) + 'normal', self.roi_frame, fmt='%1d')
-
-                self.buffer_frame = self.roi_frame  # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
-                # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
-                self.buffError = subtract_frame
+            self.buffer_frame = self.roi_frame  # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
+            # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
+            self.buffError = subtract_frame
             bounding_box_frame = self.frame.copy()
-
             output_frame = cv2.rectangle(bounding_box_frame, (self.default_x, self.default_y),
                                          (self.default_x + self.w, self.default_y + self.h), (0, 255, 0),
                                          thickness=5)
-            output_frame = cv2.resize(output_frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
-
 
 
             qimg = QtGui.QImage(output_frame.data, label_w, label_h,
@@ -282,9 +267,9 @@ class Camera(QtCore.QObject):
             pixmap = QtGui.QPixmap.fromImage(qimg)
             self.label.setPixmap(pixmap)
 
-                # loop = QtCore.QEventLoop()
-                # QtCore.QTimer.singleShot(33, loop.quit)  # 이벤트 루트 간격
-                # loop.exec_()
+            # loop = QtCore.QEventLoop()
+            # QtCore.QTimer.singleShot(33, loop.quit)  # 이벤트 루트 간격
+            # loop.exec_()
 
 
 
@@ -297,7 +282,6 @@ class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
         self.setupUi(self)
         self.buttonBox.clicked.connect(self.idleTimeEditChanged)
         self.threshold.valueChanged.connect(self.thresholdSliderMoved) # 민감도 슬라이더 움직일 때
-        self.fps.valueChanged.connect(self.fpsSliderMoved)
 
         self.init()
 
@@ -307,25 +291,16 @@ class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
         self.thresholdLCD.display((threshold-1)/0.05)
         self.textEdit.setText(str(idleTime))
 
-
-    def idleTimeEditChanged(self):
-
-        win.camera.idleTime = int(self.textEdit.toPlainText())
-        win.camera.threshold = 1 + (0.05 * self.threshold.value())
-
     def thresholdSliderMoved(self):
 
         win.camera.threshold = 1 + (0.05 * self.threshold.value())
         self.thresholdLCD.display(self.threshold.value())
 
 
-    def fpsSliderMoved(self):
+    def idleTimeEditChanged(self):
 
-        win.camera.fps = self.fps.value()
-        self.fpsLCD.display(self.fps.value())
-
-
-
+        win.camera.idleTime = int(self.textEdit.toPlainText())
+        win.camera.threshold = 1 + (0.05 * self.threshold.value())
 
 
 
@@ -356,7 +331,7 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.exitButton.clicked.connect(self.quit)
 
         # 메뉴바 시그널 연결
-        #self.actionStart.triggered.connect(self.camera.loop)
+        self.actionStart.triggered.connect(self.camera.loop)
         self.actionQuit.triggered.connect(self.quit)
 
     def quit(self):
@@ -370,7 +345,6 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
 
 if __name__ == "__main__":
-
     pygame.init()
     pygame.mixer.init()
     pygame.mixer.music.load("res/alert.mp3")
