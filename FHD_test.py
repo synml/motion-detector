@@ -39,7 +39,7 @@ mainUi = uic.loadUiType('main.ui')[0]
 setOptionDialogUi = uic.loadUiType('setOptionDialog.ui')[0]
 
 
-class camera:
+class IPCamera:
     def __init__(self, rtsp_url):
         # 데이터 프로세스 전송 파이프
         self.rtsp_url = rtsp_url
@@ -113,16 +113,16 @@ class camera:
         return cv2.resize(frame, None, fx=percent, fy=percent)
 
 
-class Camera(QtCore.QObject):
+class MotionDetector(QtCore.QObject):
     idleTime = 5
 
     def __init__(self, label, textBrowser):
-        super(Camera, self).__init__()
+        super(MotionDetector, self).__init__()
         # self.camera = cv2.VideoCapture(0)
         # self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
         # self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/fhd/media.smp') #연구실꺼 4
 
-        self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')  # 재승이형꺼
+        self.camera = IPCamera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')  # 재승이형꺼
         self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')
 
         self.rescale_value = None
@@ -283,9 +283,9 @@ class Camera(QtCore.QObject):
             # loop.exec_()
 
 
-class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
+class SetOptionDialog(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
     def __init__(self):
-        super(SubWindow, self).__init__()
+        super(SetOptionDialog, self).__init__()
 
         self.setupUi(self)
         self.buttonBox.clicked.connect(self.idleTimeEditChanged)
@@ -300,15 +300,15 @@ class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
         self.textEdit.setText(str(idleTime))
 
     def idleTimeEditChanged(self):
-        win.camera.idleTime = int(self.textEdit.toPlainText())
-        win.camera.threshold = 1 + (0.05 * self.threshold.value())
+        win.motionDetector.idleTime = int(self.textEdit.toPlainText())
+        win.motionDetector.threshold = 1 + (0.05 * self.threshold.value())
 
     def thresholdSliderMoved(self):
-        win.camera.threshold = 1 + (0.05 * self.threshold.value())
+        win.motionDetector.threshold = 1 + (0.05 * self.threshold.value())
         self.thresholdLCD.display(self.threshold.value())
 
     def fpsSliderMoved(self):
-        win.camera.fps = self.fps.value()
+        win.motionDetector.fps = self.fps.value()
         self.fpsLCD.display(self.fps.value())
 
 
@@ -319,28 +319,20 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
         self.thread = QtCore.QThread()
         self.thread.start()
-        self.thread2 = QtCore.QThread()
-        self.thread2.start()
 
-        self.camera = Camera(self.label, self.textBrowser)
+        self.motionDetector = MotionDetector(self.label, self.textBrowser)
+        self.motionDetector.moveToThread(self.thread)
 
-        self.camera.moveToThread(self.thread)
-
-        self.setOptionDialog = SubWindow()
+        self.setOptionDialog = SetOptionDialog()
         self.setOptionDialog.moveToThread(self.thread)
 
-        # 카메라
-
-        self.startButton.clicked.connect(self.camera.loop)
+        self.startButton.clicked.connect(self.motionDetector.loop)
         self.setOptionButton.clicked.connect(self.setOptionDialog.show)
         self.exitButton.clicked.connect(self.quit)
-
-        # 메뉴바 시그널 연결
-        # self.actionStart.triggered.connect(self.camera.loop)
         self.actionQuit.triggered.connect(self.quit)
 
     def quit(self):
-        self.camera.logic = False  # 메인로직 반복 종료
+        self.motionDetector.logic = False  # 메인로직 반복 종료
         print("종료")
         if rasp:
             GPIO.cleanup()
