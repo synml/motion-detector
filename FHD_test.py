@@ -309,6 +309,7 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.setOptionButton.clicked.connect(self.setOptionDialog.show)
         self.exitButton.clicked.connect(self.quit)
         self.actionQuit.triggered.connect(self.quit)
+        self.actionSetOption.triggered.connect(self.setOptionDialog.show)
 
     def quit(self):
         self.motionDetector.logic = False  # 메인로직 반복 종료

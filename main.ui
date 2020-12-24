@@ -145,14 +145,6 @@ color: rgb(255, 255, 255);</string>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1230</width>
-     <height>26</height>
-    </rect>
-   </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>파일(F)</string>
@@ -160,21 +152,11 @@ color: rgb(255, 255, 255);</string>
     <addaction name="actionStart"/>
     <addaction name="actionQuit"/>
    </widget>
-   <widget class="QMenu" name="menuEdit">
-    <property name="title">
-     <string>편집(E)</string>
-    </property>
-   </widget>
-   <widget class="QMenu" name="menuView">
-    <property name="title">
-     <string>보기(V)</string>
-    </property>
-   </widget>
    <widget class="QMenu" name="menuSetting">
     <property name="title">
      <string>설정(S)</string>
     </property>
-    <addaction name="actionPreferences"/>
+    <addaction name="actionSetOption"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -183,8 +165,6 @@ color: rgb(255, 255, 255);</string>
     <addaction name="actionInformation"/>
    </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuEdit"/>
-   <addaction name="menuView"/>
    <addaction name="menuSetting"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -209,13 +189,13 @@ color: rgb(255, 255, 255);</string>
     <string>정보</string>
    </property>
   </action>
-  <action name="actionPreferences">
+  <action name="actionSetOption">
    <property name="icon">
     <iconset>
      <normaloff>res/icon/settings.png</normaloff>res/icon/settings.png</iconset>
    </property>
    <property name="text">
-    <string>환경 설정</string>
+    <string>옵션 설정</string>
    </property>
   </action>
   <action name="actionStart">
@@ -224,10 +204,7 @@ color: rgb(255, 255, 255);</string>
      <normaloff>res/icon/start.png</normaloff>res/icon/start.png</iconset>
    </property>
    <property name="text">
-    <string>시작(S)</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+S</string>
+    <string>시작</string>
    </property>
   </action>
  </widget>
