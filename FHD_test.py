@@ -269,15 +269,12 @@ class SetOptionDialog(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
         super(SetOptionDialog, self).__init__()
         self.setupUi(self)
 
+        self.thresholdLCD.display((threshold - 1) / 0.05)
+        self.textEdit.setText(str(idleTime))
+
         self.buttonBox.clicked.connect(self.idleTimeEditChanged)
         self.threshold.valueChanged.connect(self.thresholdSliderMoved)  # 민감도 슬라이더 움직일 때
         self.fps.valueChanged.connect(self.fpsSliderMoved)
-
-        self.init()
-
-    def init(self):
-        self.thresholdLCD.display((threshold - 1) / 0.05)
-        self.textEdit.setText(str(idleTime))
 
     def idleTimeEditChanged(self):
         win.motionDetector.idleTime = int(self.textEdit.toPlainText())
