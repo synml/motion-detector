@@ -38,7 +38,7 @@ setOptionDialogUi = uic.loadUiType('setOptionDialog.ui')[0]
 
 
 class IPCamera:
-    def __init__(self, rtsp_url):
+    def __init__(self, rtsp_url: str):
         # 데이터 프로세스 전송 파이프
         self.rtsp_url = rtsp_url
         self.parent_conn, child_conn = mp.Pipe()
@@ -56,7 +56,7 @@ class IPCamera:
         # 프로세스 종료 요청
         self.parent_conn.send(2)
 
-    def update(self, conn, rtsp_url):
+    def update(self, conn, rtsp_url: str):
         # load cam into separate process
         print("카메라 로드 중")
         cap = cv2.VideoCapture(rtsp_url)
