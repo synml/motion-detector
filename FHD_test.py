@@ -271,24 +271,24 @@ class SetOptionDialog(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
         super(SetOptionDialog, self).__init__()
         self.setupUi(self)
 
-        self.idleTime.setValue(idleTime)
-        self.threshold.setSliderPosition(int((threshold - 1) / 0.05) + 1)
+        self.idleTimeSpinBox.setValue(idleTime)
+        self.thresholdSlider.setSliderPosition(int((threshold - 1) / 0.05) + 1)
         self.thresholdLCD.display((threshold - 1) / 0.05)
 
-        self.idleTime.valueChanged.connect(self.idleTimeValueChanged)
-        self.threshold.valueChanged.connect(self.thresholdValueChanged)
-        self.fps.valueChanged.connect(self.fpsValueChanged)
+        self.idleTimeSpinBox.valueChanged.connect(self.idleTimeValueChanged)
+        self.thresholdSlider.valueChanged.connect(self.thresholdValueChanged)
+        self.fpsSlider.valueChanged.connect(self.fpsValueChanged)
 
     def idleTimeValueChanged(self):
-        win.motionDetector.idleTime = self.idleTime.value()
+        win.motionDetector.idleTime = self.idleTimeSpinBox.value()
 
     def thresholdValueChanged(self):
-        win.motionDetector.threshold = 1 + (0.05 * self.threshold.value())
-        self.thresholdLCD.display(self.threshold.value())
+        win.motionDetector.threshold = 1 + (0.05 * self.thresholdSlider.value())
+        self.thresholdLCD.display(self.thresholdSlider.value())
 
     def fpsValueChanged(self):
-        win.motionDetector.fps = self.fps.value()
-        self.fpsLCD.display(self.fps.value())
+        win.motionDetector.fps = self.fpsSlider.value()
+        self.fpsLCD.display(self.fpsSlider.value())
 
 
 class MainWindow(QtWidgets.QMainWindow, mainUi):

@@ -53,7 +53,7 @@
     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
    </property>
   </widget>
-  <widget class="QSlider" name="threshold">
+  <widget class="QSlider" name="thresholdSlider">
    <property name="geometry">
     <rect>
      <x>80</x>
@@ -130,7 +130,7 @@
     <number>2</number>
    </property>
   </widget>
-  <widget class="QSlider" name="fps">
+  <widget class="QSlider" name="fpsSlider">
    <property name="geometry">
     <rect>
      <x>80</x>
@@ -207,7 +207,7 @@
     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
    </property>
   </widget>
-  <widget class="QSpinBox" name="idleTime">
+  <widget class="QSpinBox" name="idleTimeSpinBox">
    <property name="geometry">
     <rect>
      <x>80</x>
@@ -228,8 +228,11 @@
    <property name="suffix">
     <string> 초</string>
    </property>
+   <property name="minimum">
+    <number>1</number>
+   </property>
    <property name="value">
-    <number>0</number>
+    <number>1</number>
    </property>
   </widget>
  </widget>
