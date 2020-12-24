@@ -276,17 +276,17 @@ class SetOptionDialog(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
         self.thresholdLCD.display((threshold - 1) / 0.05)
 
         self.idleTime.valueChanged.connect(self.idleTimeValueChanged)
-        self.threshold.valueChanged.connect(self.thresholdSliderMoved)
-        self.fps.valueChanged.connect(self.fpsSliderMoved)
+        self.threshold.valueChanged.connect(self.thresholdValueChanged)
+        self.fps.valueChanged.connect(self.fpsValueChanged)
 
     def idleTimeValueChanged(self):
         win.motionDetector.idleTime = self.idleTime.value()
 
-    def thresholdSliderMoved(self):
+    def thresholdValueChanged(self):
         win.motionDetector.threshold = 1 + (0.05 * self.threshold.value())
         self.thresholdLCD.display(self.threshold.value())
 
-    def fpsSliderMoved(self):
+    def fpsValueChanged(self):
         win.motionDetector.fps = self.fps.value()
         self.fpsLCD.display(self.fps.value())
 
