@@ -12,6 +12,7 @@ from PyQt5 import uic
 
 try:
     import RPi.GPIO as GPIO
+
     GPIO.setMode(GPIO.BCM)
     rasp = True
     idle = 25
@@ -38,8 +39,7 @@ mainUi = uic.loadUiType('main.ui')[0]
 setOptionDialogUi = uic.loadUiType('setOptionDialog.ui')[0]
 
 
-class camera():
-
+class camera:
     def __init__(self, rtsp_url):
         # 데이터 프로세스 전송 파이프
         self.rtsp_url = rtsp_url
@@ -83,7 +83,6 @@ class camera():
                 ret, frame = cap.read()
                 conn.send(frame)
 
-
             elif rec_dat == 2:
                 # 요청이 없는 경우
                 cap.release()
@@ -93,7 +92,7 @@ class camera():
         conn.close()
 
     def get_frame(self, resize=None):
-        #카메라 연결 프로세스에서 프레임 수신하는데 사용
+        # 카메라 연결 프로세스에서 프레임 수신하는데 사용
         # resize 값 50% 증가인 경우 1.5
 
         # send request
@@ -104,26 +103,26 @@ class camera():
         self.parent_conn.send(0)
 
         # resize if needed
-        if resize == None:
+        if resize is None:
             return frame
         else:
             print("리사이즈")
             return self.rescale_frame(frame, resize)
 
     def rescale_frame(self, frame, percent=65):
-
         return cv2.resize(frame, None, fx=percent, fy=percent)
 
 
 class Camera(QtCore.QObject):
     idleTime = 5
+
     def __init__(self, label, textBrowser):
         super(Camera, self).__init__()
         # self.camera = cv2.VideoCapture(0)
         # self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
         # self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/fhd/media.smp') #연구실꺼 4
 
-        self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp') # 재승이형꺼
+        self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')  # 재승이형꺼
         self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')
 
         self.rescale_value = None
@@ -138,23 +137,23 @@ class Camera(QtCore.QObject):
         self.idleMode = False  # Flag변수, 이상 감지 후 유휴 상태 돌입
         global idleTime, threshold
         self.idleTime = idleTime
-        #self.discount = 0
+        # self.discount = 0
         self.threshold = threshold
         self.fps = 1
 
-
         # 첫 프레임 gui 라벨 이미지 설정
         # ret, self.firstFrame = self.firstCamera.read()
-        #self.frame = self.camera.get_frame()
+        # self.frame = self.camera.get_frame()
         _, self.frame = self.firstCamera.read()
 
         self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
         self.firstFrame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
 
-        #qimg = QtGui.QImage(self.firstFrame.data, self.firstFrame.shape[1], self.firstFrame.shape[0],
-#                            self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
-        #pixmap = QtGui.QPixmap.fromImage(qimg)
-        #self.label.setPixmap(pixmap)
+        # qimg = QtGui.QImage(self.firstFrame.data, self.firstFrame.shape[1], self.firstFrame.shape[0],
+
+    #                            self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
+    # pixmap = QtGui.QPixmap.fromImage(qimg)
+    # self.label.setPixmap(pixmap)
 
     def onMouse(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -177,15 +176,13 @@ class Camera(QtCore.QObject):
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-
     def loop(self):
         now = time.localtime()
         # textBrowser 이벤트 처리
         self.textBrowser.append("감지 시작: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
                                 "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
         # ROI 처리
-        print("frame", self.frame.shape
-              )
+        print("frame", self.frame.shape)
         if self.default_x == -1: self.setRoI(self.frame)
 
         previous_time = time.time()
@@ -200,16 +197,18 @@ class Camera(QtCore.QObject):
                 previous_time = time.time()
                 self.total_frame += 1
 
+                # self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
 
-                #self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+                if self.buffer_frame is None:  # 첫 프레임인 경우에
+                    self.buffer_frame = self.frame[self.default_y:self.default_y + self.h,
+                                        self.default_x:self.default_x + self.w]
 
-                if self.buffer_frame is None: # 첫 프레임인 경우에
-                    self.buffer_frame = self.frame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
-
-                self.roi_frame = self.frame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
+                self.roi_frame = self.frame[self.default_y:self.default_y + self.h,
+                                 self.default_x:self.default_x + self.w]
                 print(self.roi_frame.shape)
 
-                subtract_frame = np.round(np.sqrt(np.sum(np.abs(self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
+                subtract_frame = np.round(
+                    np.sqrt(np.sum(np.abs(self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
                 # subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
                 print(subtract_frame)
 
@@ -219,8 +218,8 @@ class Camera(QtCore.QObject):
                 if self.idleMode:
                     # print("유휴")
                     win.statusLabel.setText("유휴 상태")
-                    win.idleTimeLcd.display((self.idleInitTime + self.idleTime ) - time.time())
-                    #self.discount += 1
+                    win.idleTimeLcd.display((self.idleInitTime + self.idleTime) - time.time())
+                    # self.discount += 1
 
                     if rasp:
                         GPIO.output(idle, GPIO.HIGH)  # rasp인 경우 GPIO 출력
@@ -230,7 +229,7 @@ class Camera(QtCore.QObject):
                         if rasp:
                             GPIO.output(idle, GPIO.LOW)  # RASP인 경우 GPIO OFF
                         self.idleMode = False  # 유휴상태 해제
-                        #self.discount = 0
+                        # self.discount = 0
 
                 # 일반 감지 모드
                 else:
@@ -239,11 +238,10 @@ class Camera(QtCore.QObject):
                     win.statusLabel.setText("일반 감지 상태")
                     win.idleTimeLcd.display(0)
 
-                    #threshold = self.buffError * self.threshold
-
+                    # threshold = self.buffError * self.threshold
 
                     if subtract_frame > self.buffError * self.threshold and self.total_frame >= 3:
-                        #np.savetxt("np_save/"+str(self.total_frame)+'_error', self.roi_frame, fmt='%1d')
+                        # np.savetxt("np_save/"+str(self.total_frame)+'_error', self.roi_frame, fmt='%1d')
 
                         # print("이상감지")
                         if rasp:
@@ -263,7 +261,7 @@ class Camera(QtCore.QObject):
                     else:
                         if rasp:
                             GPIO.output(alert, GPIO.LOW)
-                #np.savetxt("np_save/" + str(self.total_frame) + 'normal', self.roi_frame, fmt='%1d')
+                # np.savetxt("np_save/" + str(self.total_frame) + 'normal', self.roi_frame, fmt='%1d')
 
                 self.buffer_frame = self.roi_frame  # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
                 # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
@@ -275,19 +273,14 @@ class Camera(QtCore.QObject):
                                          thickness=5)
             output_frame = cv2.resize(output_frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
 
-
-
             qimg = QtGui.QImage(output_frame.data, label_w, label_h,
                                 output_frame.strides[0], QtGui.QImage.Format_Grayscale8)
             pixmap = QtGui.QPixmap.fromImage(qimg)
             self.label.setPixmap(pixmap)
 
-                # loop = QtCore.QEventLoop()
-                # QtCore.QTimer.singleShot(33, loop.quit)  # 이벤트 루트 간격
-                # loop.exec_()
-
-
-
+            # loop = QtCore.QEventLoop()
+            # QtCore.QTimer.singleShot(33, loop.quit)  # 이벤트 루트 간격
+            # loop.exec_()
 
 
 class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
@@ -296,38 +289,27 @@ class SubWindow(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
 
         self.setupUi(self)
         self.buttonBox.clicked.connect(self.idleTimeEditChanged)
-        self.threshold.valueChanged.connect(self.thresholdSliderMoved) # 민감도 슬라이더 움직일 때
+        self.threshold.valueChanged.connect(self.thresholdSliderMoved)  # 민감도 슬라이더 움직일 때
         self.fps.valueChanged.connect(self.fpsSliderMoved)
 
         self.init()
 
     def init(self):
-
-        #self.threshold.setValue(((threshold-1)/0.05))
-        self.thresholdLCD.display((threshold-1)/0.05)
+        # self.threshold.setValue(((threshold-1)/0.05))
+        self.thresholdLCD.display((threshold - 1) / 0.05)
         self.textEdit.setText(str(idleTime))
 
-
     def idleTimeEditChanged(self):
-
         win.camera.idleTime = int(self.textEdit.toPlainText())
         win.camera.threshold = 1 + (0.05 * self.threshold.value())
 
     def thresholdSliderMoved(self):
-
         win.camera.threshold = 1 + (0.05 * self.threshold.value())
         self.thresholdLCD.display(self.threshold.value())
 
-
     def fpsSliderMoved(self):
-
         win.camera.fps = self.fps.value()
         self.fpsLCD.display(self.fps.value())
-
-
-
-
-
 
 
 class MainWindow(QtWidgets.QMainWindow, mainUi):
@@ -347,8 +329,6 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.setOptionDialog = SubWindow()
         self.setOptionDialog.moveToThread(self.thread)
 
-
-
         # 카메라
 
         self.startButton.clicked.connect(self.camera.loop)
@@ -356,7 +336,7 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.exitButton.clicked.connect(self.quit)
 
         # 메뉴바 시그널 연결
-        #self.actionStart.triggered.connect(self.camera.loop)
+        # self.actionStart.triggered.connect(self.camera.loop)
         self.actionQuit.triggered.connect(self.quit)
 
     def quit(self):
@@ -370,7 +350,6 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
 
 if __name__ == "__main__":
-
     pygame.init()
     pygame.mixer.init()
     pygame.mixer.music.load("res/alert.mp3")
