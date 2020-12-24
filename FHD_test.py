@@ -157,19 +157,24 @@ class MotionDetector(QtCore.QObject):
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
+    def write_log(self, message: str):
+        now = time.localtime()
+        self.textBrowser.append(message + ': ' + str(now.tm_year) + "년 " + str(now.tm_mon) + "월 "
+                                + str(now.tm_mday) + "일 " + str(now.tm_hour) + "시 "
+                                + str(now.tm_min) + "분 " + str(now.tm_sec) + "초")
+
     def loop(self):
         now = time.localtime()
         # textBrowser 이벤트 처리
-        self.textBrowser.append("감지 시작: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
-                                "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
+        self.write_log('감지 시작')
         # ROI 처리
         print("frame", self.frame.shape)
-        if self.default_x == -1: self.setRoI(self.frame)
+        if self.default_x == -1:
+            self.setRoI(self.frame)
 
         previous_time = time.time()
 
         while self.logic:
-
             self.frame = self.ip_camera.get_frame()
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             current_time = time.time() - previous_time
@@ -193,7 +198,8 @@ class MotionDetector(QtCore.QObject):
                 # subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
                 print(subtract_frame)
 
-                if self.buffError is None: self.buffError = subtract_frame
+                if self.buffError is None:
+                    self.buffError = subtract_frame
 
                 # 유휴 상태
                 if self.idleMode:
@@ -231,11 +237,7 @@ class MotionDetector(QtCore.QObject):
                         # self.buffer_frame = roi_frame
 
                         # textBrowser에 로그 기록
-                        now = time.localtime()
-                        self.textBrowser.append(
-                            "이상 감지: " + str(now.tm_year) + "년" + str(now.tm_mon) + "월" + str(now.tm_mday) +
-                            "일" + str(now.tm_hour) + "시" + str(now.tm_min) + "분" + str(now.tm_sec) + "초")
-
+                        self.write_log('이상 감지')
                         self.idleMode = True
 
                         # print("진입시간",self.idleInitTime)
