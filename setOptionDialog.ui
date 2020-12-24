@@ -25,6 +25,13 @@
   <property name="windowTitle">
    <string>옵션 설정</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>res/icon/settings.png</normaloff>res/icon/settings.png</iconset>
+  </property>
+  <property name="modal">
+   <bool>true</bool>
+  </property>
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
