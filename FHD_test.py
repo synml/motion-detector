@@ -272,7 +272,7 @@ class SetOptionDialog(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
         self.setupUi(self)
 
         self.idleTime.setValue(idleTime)
-        self.threshold.setSliderPosition(int((threshold - 1) / 0.05))
+        self.threshold.setSliderPosition(int((threshold - 1) / 0.05) + 1)
         self.thresholdLCD.display((threshold - 1) / 0.05)
 
         self.idleTime.valueChanged.connect(self.idleTimeValueChanged)
