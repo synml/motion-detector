@@ -8,18 +8,9 @@ import pygame
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5 import uic
 
-try:
-    import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 
-    GPIO.setMode(GPIO.BCM)
-    rasp = True
-    #idle = 25
-    alert = 24
-    GPIO.setup(alert, GPIO.OUT)
-except ModuleNotFoundError:
-    rasp = False
-    #idle = 25
-    alert = 24
+
 
 """
 전역 설정란
@@ -48,6 +39,7 @@ class IPCamera:
         self.p.daemon = True
         self.p.start()
 
+
     def get_first_frame(self):
         _, frame = cv2.VideoCapture(self.rtsp_url).read()
         return frame
@@ -55,6 +47,7 @@ class IPCamera:
     def end(self):
         # 프로세스 종료 요청
         self.parent_conn.send(2)
+        self.p.close()
 
     def update(self, conn, rtsp_url: str):
         # load cam into separate process
@@ -100,6 +93,9 @@ class IPCamera:
         else:
             print("리사이즈")
             return cv2.resize(frame, None, fx=resize, fy=resize)
+
+    def close(self):
+        self.p.close()
 
 
 class MotionDetector(QtCore.QObject):
@@ -266,8 +262,7 @@ class MotionDetector(QtCore.QObject):
                     # threshold = self.buffError * self.threshold
 
                     if subtract_frame > self.buffError * self.threshold:# and self.total_frame >= 3:
-                        if rasp:
-                            GPIO.output(alert, GPIO.HIGH)
+                        GPIO.output(alert, GPIO.HIGH)
                         pygame.mixer.music.play()
                         # self.buffer_frame = roi_frame
 
@@ -277,9 +272,8 @@ class MotionDetector(QtCore.QObject):
 
                         # print("진입시간",self.idleInitTime)
                     else:
-                        if rasp:
-                            GPIO.output(alert, GPIO.LOW)
-                # np.savetxt("np_save/" + str(self.total_frame) + 'normal', self.roi_frame, fmt='%1d')
+                        GPIO.output(alert, GPIO.LOW)
+
 
                 self.buffer_frame = self.roi_frame  # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
                 # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
@@ -349,8 +343,6 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
     def quit(self):
         self.motionDetector.logic = False  # 메인로직 반복 종료
         self.motionDetector.ip_camera.end()
-        if rasp:
-            GPIO.cleanup()
         pygame.mixer.quit()
         pygame.quit()
         app.instance().quit()
@@ -360,7 +352,13 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         win.thread.wait(5000)
 
 
+
+
 if __name__ == "__main__":
+    GPIO.setMode(GPIO.BCM)
+    # idle = 25
+    alert = 24
+    GPIO.setup(alert, GPIO.OUT)
     pygame.init()
     pygame.mixer.init()
     pygame.mixer.music.load("res/alert.mp3")
