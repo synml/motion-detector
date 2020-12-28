@@ -302,6 +302,7 @@ class MotionDetector(QtCore.QObject):
 
 
 class SetOptionDialog(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
+class SetOptionDialog(QtWidgets.QDialog, setOptionDialogUi):
     def __init__(self):
         super(SetOptionDialog, self).__init__()
         self.setupUi(self)
