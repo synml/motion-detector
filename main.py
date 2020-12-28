@@ -35,6 +35,7 @@ label_h = 600
 
 mainUi = uic.loadUiType('main.ui')[0]
 setOptionDialogUi = uic.loadUiType('setOptionDialog.ui')[0]
+infoDialogUi = uic.loadUiType('infoDialog.ui')[0]
 
 
 class IPCamera:
@@ -301,7 +302,12 @@ class MotionDetector(QtCore.QObject):
             # loop.exec_()
 
 
-class SetOptionDialog(QtWidgets.QDialog, QtCore.QObject, setOptionDialogUi):
+class InfoDialog(QtWidgets.QDialog, infoDialogUi):
+    def __init__(self):
+        super(InfoDialog, self).__init__()
+        self.setupUi(self)
+
+
 class SetOptionDialog(QtWidgets.QDialog, setOptionDialogUi):
     def __init__(self):
         super(SetOptionDialog, self).__init__()
@@ -337,15 +343,16 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
         self.motionDetector = MotionDetector(self.label, self.textBrowser)
         self.motionDetector.moveToThread(self.thread)
-
         self.setOptionDialog = SetOptionDialog()
         self.setOptionDialog.moveToThread(self.thread)
+        self.infoDialog = InfoDialog()
 
         self.startButton.clicked.connect(self.motionDetector.loop)
         self.setOptionButton.clicked.connect(self.setOptionDialog.show)
         self.exitButton.clicked.connect(self.quit)
         self.actionQuit.triggered.connect(self.quit)
         self.actionSetOption.triggered.connect(self.setOptionDialog.show)
+        self.actionInfo.triggered.connect(self.infoDialog.show)
 
     def quit(self):
         self.motionDetector.logic = False  # 메인로직 반복 종료
