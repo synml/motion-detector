@@ -162,7 +162,7 @@ color: rgb(255, 255, 255);</string>
     <property name="title">
      <string>도움말(H)</string>
     </property>
-    <addaction name="actionInformation"/>
+    <addaction name="actionInfo"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSetting"/>
@@ -180,7 +180,7 @@ color: rgb(255, 255, 255);</string>
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionInformation">
+  <action name="actionInfo">
    <property name="icon">
     <iconset>
      <normaloff>res/icon/information.png</normaloff>res/icon/information.png</iconset>
