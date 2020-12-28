@@ -119,7 +119,7 @@ class MotionDetector(QtCore.QObject):
         self.logic = True  # 반복 루프 제어
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
         self.buffer_frame = None
-        self.total_frame = 0
+        #self.total_frame = 0
         self.buffError = None  # 이전 프레임 기준 오차율
         self.idleMode = False  # Flag변수, 이상 감지 후 유휴 상태 돌입
         global idleTime, threshold
@@ -172,6 +172,48 @@ class MotionDetector(QtCore.QObject):
         if self.default_x == -1:
             self.setRoI(self.frame)
 
+        #첫 프레임 로드 받은 후 연산 처리 작업
+        if self.buffer_frame is None:  # 첫 프레임인 경우에
+            self.frame = self.ip_camera.get_frame()
+            self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+            self.buffer_frame = self.frame[self.default_y:self.default_y + self.h,
+                                self.default_x:self.default_x + self.w]
+            subtract_frame = np.round(
+                np.sqrt(np.sum(np.abs(self.buffer_frame - self.buffer_frame) ** 2)))  # L2 DISTANCE
+            print(subtract_frame)
+            self.buffError = subtract_frame
+            # 수정사항 -----------------
+            bounding_box_frame = self.frame.copy()
+
+            output_frame = cv2.rectangle(bounding_box_frame, (self.default_x, self.default_y),
+                                         (self.default_x + self.w, self.default_y + self.h), (0, 255, 0),
+                                         thickness=5)
+            output_frame = cv2.resize(output_frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+
+            qimg = QtGui.QImage(output_frame.data, label_w, label_h,
+                                output_frame.strides[0], QtGui.QImage.Format_Grayscale8)
+            pixmap = QtGui.QPixmap.fromImage(qimg)
+            self.label.setPixmap(pixmap)
+
+        # 두 번째 프레임 처리
+        cv2.waitKey(1000)
+        self.frame = self.ip_camera.get_frame()
+        self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+        self.roi_frame = self.frame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
+        subtract_frame = np.round(np.sqrt(np.sum(np.abs(self.buffer_frame - self.roi_frame) ** 2)))
+
+        self.buffer_frame = self.roi_frame
+        self.buffError = subtract_frame
+        bounding_box_frame = self.frame.copy()
+        output_frame = cv2.rectangle(bounding_box_frame, (self.default_x, self.default_y),
+                                     (self.default_x + self.w, self.default_y + self.h), (0, 255, 0),
+                                     thickness=5)
+        output_frame = cv2.resize(output_frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+        qimg = QtGui.QImage(output_frame.data, label_w, label_h,
+                            output_frame.strides[0], QtGui.QImage.Format_Grayscale8)
+        pixmap = QtGui.QPixmap.fromImage(qimg)
+        self.label.setPixmap(pixmap)
+
         previous_time = time.time()
 
         while self.logic:
@@ -181,7 +223,7 @@ class MotionDetector(QtCore.QObject):
 
             if current_time > 1. / self.fps:
                 previous_time = time.time()
-                self.total_frame += 1
+                #self.total_frame += 1
 
                 # self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
 
@@ -227,7 +269,7 @@ class MotionDetector(QtCore.QObject):
 
                     # threshold = self.buffError * self.threshold
 
-                    if subtract_frame > self.buffError * self.threshold and self.total_frame >= 3:
+                    if subtract_frame > self.buffError * self.threshold:# and self.total_frame >= 3:
                         # np.savetxt("np_save/"+str(self.total_frame)+'_error', self.roi_frame, fmt='%1d')
 
                         # print("이상감지")
