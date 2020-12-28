@@ -13,12 +13,12 @@ try:
 
     GPIO.setMode(GPIO.BCM)
     rasp = True
-    idle = 25
+    #idle = 25
     alert = 24
     GPIO.setup(alert, GPIO.OUT)
 except ModuleNotFoundError:
     rasp = False
-    idle = 25
+    #idle = 25
     alert = 24
 
 """
@@ -196,7 +196,7 @@ class MotionDetector(QtCore.QObject):
             self.label.setPixmap(pixmap)
 
         # 두 번째 프레임 처리
-        cv2.waitKey(1000)
+
         self.frame = self.ip_camera.get_frame()
         self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
         self.roi_frame = self.frame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
@@ -250,13 +250,9 @@ class MotionDetector(QtCore.QObject):
                     win.idleTimeLcd.display((self.idleInitTime + self.idleTime) - time.time())
                     # self.discount += 1
 
-                    if rasp:
-                        GPIO.output(idle, GPIO.HIGH)  # rasp인 경우 GPIO 출력
                     # print("유휴상태 현재시간", time.time())
 
                     if self.idleInitTime + self.idleTime <= time.time():
-                        if rasp:
-                            GPIO.output(idle, GPIO.LOW)  # RASP인 경우 GPIO OFF
                         self.idleMode = False  # 유휴상태 해제
                         # self.discount = 0
 
@@ -270,9 +266,6 @@ class MotionDetector(QtCore.QObject):
                     # threshold = self.buffError * self.threshold
 
                     if subtract_frame > self.buffError * self.threshold:# and self.total_frame >= 3:
-                        # np.savetxt("np_save/"+str(self.total_frame)+'_error', self.roi_frame, fmt='%1d')
-
-                        # print("이상감지")
                         if rasp:
                             GPIO.output(alert, GPIO.HIGH)
                         pygame.mixer.music.play()
