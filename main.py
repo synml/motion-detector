@@ -112,7 +112,15 @@ class MotionDetector(QtCore.QObject):
         # self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
         # self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/fhd/media.smp') #연구실꺼 4
 
-        self.ip_camera = IPCamera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')  # 재승이형꺼
+        self.cameraProtocol = 'rtsp'
+        self.cameraID = 'admin'
+        self.cameraPassword = '1q2w3e4r5t'
+        self.cameraIP = '192.168.0.4'
+        self.cameraPort = '554'
+        self.cameraProfileName = 'test'
+        self.cameraUrl = self.cameraProtocol+'://'+self.cameraID+':'+self.cameraPassword+'@'+self.cameraIP+':'+self.cameraPort+'/'+self.cameraProfileName+'/media.smp'
+        # self.ip_camera = IPCamera(self.cameraUrl)  # 재승이형꺼
+        # self.ip_camera = IPCamera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')  # 재승이형꺼
 
         self.label = label
         self.textBrowser = textBrowser
@@ -129,8 +137,8 @@ class MotionDetector(QtCore.QObject):
         self.fps = 1
 
         # 첫 프레임 gui 라벨 이미지 설정
-        self.frame = cv2.cvtColor(self.ip_camera.get_first_frame(), cv2.COLOR_BGR2GRAY)
-        self.firstFrame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+
+        #self.firstFrame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
 
         # qimg = QtGui.QImage(self.firstFrame.data, self.firstFrame.shape[1], self.firstFrame.shape[0],
         #                     self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
@@ -165,7 +173,9 @@ class MotionDetector(QtCore.QObject):
                                 + str(now.tm_min) + "분 " + str(now.tm_sec) + "초")
 
     def loop(self):
-        now = time.localtime()
+        #now = time.localtime()
+        self.ip_camera = IPCamera(self.cameraUrl)  # 재승이형꺼
+        self.frame = cv2.cvtColor(self.ip_camera.get_first_frame(), cv2.COLOR_BGR2GRAY)
         # textBrowser 이벤트 처리
         self.write_log('감지 시작')
         # ROI 처리
@@ -313,6 +323,17 @@ class SetOptionDialog(QtWidgets.QDialog, setOptionDialogUi):
         super(SetOptionDialog, self).__init__()
         self.setupUi(self)
 
+        self.cameraID.setText(str('admin'))
+        self.cameraPW.setText(str('1q2w3e4r5t'))
+        self.cameraIP.setText(str('192.168.0.4'))
+        self.cameraProfile.setText(str('test'))
+
+        self.cameraID.textChanged.connect(self.cameraidValueChanged)
+        self.cameraPW.textChanged.connect(self.camerapwValueChanged)
+        self.cameraIP.textChanged.connect(self.cameraipValueChanged)
+        self.cameraProfile.textChanged.connect(self.cameraprofileValueChanged)
+
+
         self.idleTimeSpinBox.setValue(idleTime)
         self.thresholdSlider.setSliderPosition(int((threshold - 1) / 0.05) + 1)
         self.thresholdLCD.display((threshold - 1) / 0.05)
@@ -320,6 +341,18 @@ class SetOptionDialog(QtWidgets.QDialog, setOptionDialogUi):
         self.idleTimeSpinBox.valueChanged.connect(self.idleTimeValueChanged)
         self.thresholdSlider.valueChanged.connect(self.thresholdValueChanged)
         self.fpsSlider.valueChanged.connect(self.fpsValueChanged)
+
+    def cameraidValueChanged(self):
+        win.motionDetector.cameraID = self.cameraID.text()
+
+    def camerapwValueChanged(self):
+        win.motionDetector.cameraPassword = self.cameraPW.text()
+
+    def cameraipValueChanged(self):
+        win.motionDetector.cameraIP = self.cameraIP.text()
+
+    def cameraprofileValueChanged(self):
+        win.motionDetector.cameraProfileName = self.cameraProfile.text()
 
     def idleTimeValueChanged(self):
         win.motionDetector.idleTime = self.idleTimeSpinBox.value()
@@ -356,7 +389,11 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
     def quit(self):
         self.motionDetector.logic = False  # 메인로직 반복 종료
-        self.motionDetector.ip_camera.end()
+        try:
+            self.motionDetector.ip_camera.end()
+        except:
+            pass
+
         if rasp:
             GPIO.cleanup()
         pygame.mixer.quit()
