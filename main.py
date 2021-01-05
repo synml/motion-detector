@@ -33,9 +33,9 @@ threshold = 1.4
 label_w = 800
 label_h = 600
 #
-# def resource_path(relative_path):
-#     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-#     return os.path.join(base_path, relative_path)
+def resource_path(relative_path):
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
 
 # def resource_path(relative_path):
 #     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -47,14 +47,14 @@ label_h = 600
 #
 #     return os.path.join(base_path, relative_path)
 
-def resource_path(relative):
-    return os.path.join(
-        os.environ.get(
-            "_MEIPASS2",
-            os.path.abspath(".")
-        ),
-        relative
-    )
+# def resource_path(relative):
+#     return os.path.join(
+#         os.environ.get(
+#             "_MEIPASS2",
+#             os.path.abspath(".")
+#         ),
+#         relative
+#     )
 
 mainUI = resource_path('main.ui')
 setOptionDialogUI = resource_path('setOptionDialog.ui')
