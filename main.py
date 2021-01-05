@@ -209,6 +209,7 @@ class MotionDetector(QtCore.QObject):
         self.ip_camera = IPCamera(setUrl(self.cameraProtocol, self.cameraID, self.cameraPassword,
                                          self.cameraIP, self.cameraPort, self.cameraProfileName))  # 재승이형꺼
         self.frame = cv2.cvtColor(self.ip_camera.get_first_frame(), cv2.COLOR_BGR2GRAY)
+
         # textBrowser 이벤트 처리
         self.write_log('감지 시작')
         # ROI 처리
@@ -237,6 +238,7 @@ class MotionDetector(QtCore.QObject):
             qimg = QtGui.QImage(output_frame.data, label_w, label_h,
                                 output_frame.strides[0], QtGui.QImage.Format_Grayscale8)
             pixmap = QtGui.QPixmap.fromImage(qimg)
+            print("241줄")
             self.label.setPixmap(pixmap)
 
         # 두 번째 프레임 처리
@@ -256,11 +258,13 @@ class MotionDetector(QtCore.QObject):
         qimg = QtGui.QImage(output_frame.data, label_w, label_h,
                             output_frame.strides[0], QtGui.QImage.Format_Grayscale8)
         pixmap = QtGui.QPixmap.fromImage(qimg)
+        print("261줄")
         self.label.setPixmap(pixmap)
 
         previous_time = time.time()
 
         while self.logic:
+            print("루프돌입")
             self.frame = self.ip_camera.get_frame()
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             current_time = time.time() - previous_time
@@ -319,14 +323,13 @@ class MotionDetector(QtCore.QObject):
                         self.write_log('이상 감지')
                         self.idleMode = True
 
-                        # print("진입시간",self.idleInitTime)
+
                     else:
                         if rasp:
                             GPIO.output(alert, GPIO.LOW)
-                # np.savetxt("np_save/" + str(self.total_frame) + 'normal', self.roi_frame, fmt='%1d')
 
-                self.buffer_frame = self.roi_frame  # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
-                # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
+                self.buffer_frame = self.roi_frame
+
                 self.buffError = subtract_frame
             bounding_box_frame = self.frame.copy()
 
@@ -340,9 +343,6 @@ class MotionDetector(QtCore.QObject):
             pixmap = QtGui.QPixmap.fromImage(qimg)
             self.label.setPixmap(pixmap)
 
-            # loop = QtCore.QEventLoop()
-            # QtCore.QTimer.singleShot(33, loop.quit)  # 이벤트 루트 간격
-            # loop.exec_()
 
 
 class InfoDialog(QtWidgets.QDialog, infoDialogUi):
@@ -405,12 +405,14 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.setupUi(self)
 
         self.thread = QtCore.QThread()
+        self.thread2 = QtCore.QThread()
         self.thread.start()
+        self.thread2.start()
 
         self.motionDetector = MotionDetector(self.label, self.textBrowser)
         self.motionDetector.moveToThread(self.thread)
         self.setOptionDialog = SetOptionDialog()
-        self.setOptionDialog.moveToThread(self.thread)
+        self.setOptionDialog.moveToThread(self.thread2)
         self.infoDialog = InfoDialog()
 
         self.startButton.clicked.connect(self.motionDetector.loop)
@@ -429,8 +431,6 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
         if rasp:
             GPIO.cleanup()
-        #pygame.mixer.quit()
-        #pygame.quit()
         app.instance().quit()
         app.quit()
         win.thread.exit()
@@ -439,9 +439,7 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
 
 if __name__ == "__main__":
-    #pygame.init()
-    # pygame.mixer.init()
-    # pygame.mixer.music.load(os.path.abspath("res/alert.mp3"))
+    mp.freeze_support() # for windows
 
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     app = QtWidgets.QApplication(sys.argv)
