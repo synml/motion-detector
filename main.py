@@ -1,10 +1,10 @@
 import multiprocessing as mp
 import sys
 import time
-
+import os
 import cv2
 import numpy as np
-import pygame
+#import pygame
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5 import uic
 
@@ -32,10 +32,37 @@ threshold = 1.4
 
 label_w = 800
 label_h = 600
+#
+# def resource_path(relative_path):
+#     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+#     return os.path.join(base_path, relative_path)
 
-mainUi = uic.loadUiType('main.ui')[0]
-setOptionDialogUi = uic.loadUiType('setOptionDialog.ui')[0]
-infoDialogUi = uic.loadUiType('infoDialog.ui')[0]
+# def resource_path(relative_path):
+#     """ Get absolute path to resource, works for dev and for PyInstaller """
+#     try:
+#         # PyInstaller creates a temp folder and stores path in _MEIPASS
+#         base_path = sys._MEIPASS
+#     except Exception:
+#         base_path = os.path.abspath(".")
+#
+#     return os.path.join(base_path, relative_path)
+
+def resource_path(relative):
+    return os.path.join(
+        os.environ.get(
+            "_MEIPASS2",
+            os.path.abspath(".")
+        ),
+        relative
+    )
+
+mainUI = resource_path('main.ui')
+setOptionDialogUI = resource_path('setOptionDialog.ui')
+infoDialogUI = resource_path('infoDialog.ui')
+
+mainUi = uic.loadUiType(mainUI)[0]
+setOptionDialogUi = uic.loadUiType(setOptionDialogUI)[0]
+infoDialogUi = uic.loadUiType(os.path.abspath(infoDialogUI))[0]
 
 
 class IPCamera:
@@ -285,7 +312,7 @@ class MotionDetector(QtCore.QObject):
                     if subtract_frame > self.buffError * self.threshold:# and self.total_frame >= 3:
                         if rasp:
                             GPIO.output(alert, GPIO.HIGH)
-                        pygame.mixer.music.play()
+                        #pygame.mixer.music.play()
                         # self.buffer_frame = roi_frame
 
                         # textBrowser에 로그 기록
@@ -402,8 +429,8 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
         if rasp:
             GPIO.cleanup()
-        pygame.mixer.quit()
-        pygame.quit()
+        #pygame.mixer.quit()
+        #pygame.quit()
         app.instance().quit()
         app.quit()
         win.thread.exit()
@@ -412,9 +439,9 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
 
 if __name__ == "__main__":
-    pygame.init()
-    pygame.mixer.init()
-    pygame.mixer.music.load("res/alert.mp3")
+    #pygame.init()
+    # pygame.mixer.init()
+    # pygame.mixer.music.load(os.path.abspath("res/alert.mp3"))
 
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     app = QtWidgets.QApplication(sys.argv)
