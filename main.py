@@ -102,6 +102,10 @@ class IPCamera:
             print("리사이즈")
             return cv2.resize(frame, None, fx=resize, fy=resize)
 
+def setUrl(cameraProtocol, cameraID, cameraPassword, cameraIP, cameraPort, cameraProfileName):
+    return  cameraProtocol + '://' + cameraID + ':' \
+    + cameraPassword + '@' + cameraIP + ':' + cameraPort + '/' + cameraProfileName + '/media.smp'
+
 
 class MotionDetector(QtCore.QObject):
     idleTime = 5
@@ -118,7 +122,7 @@ class MotionDetector(QtCore.QObject):
         self.cameraIP = '192.168.0.4'
         self.cameraPort = '554'
         self.cameraProfileName = 'test'
-        self.cameraUrl = self.cameraProtocol+'://'+self.cameraID+':'+self.cameraPassword+'@'+self.cameraIP+':'+self.cameraPort+'/'+self.cameraProfileName+'/media.smp'
+        #self.cameraUrl = self.cameraProtocol+'://'+self.cameraID+':'+self.cameraPassword+'@'+self.cameraIP+':'+self.cameraPort+'/'+self.cameraProfileName+'/media.smp'
         # self.ip_camera = IPCamera(self.cameraUrl)  # 재승이형꺼
         # self.ip_camera = IPCamera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')  # 재승이형꺼
 
@@ -174,7 +178,9 @@ class MotionDetector(QtCore.QObject):
 
     def loop(self):
         #now = time.localtime()
-        self.ip_camera = IPCamera(self.cameraUrl)  # 재승이형꺼
+        # self.ip_camera = IPCamera(self.cameraUrl)  # 재승이형꺼
+        self.ip_camera = IPCamera(setUrl(self.cameraProtocol, self.cameraID, self.cameraPassword,
+                                         self.cameraIP, self.cameraPort, self.cameraProfileName))  # 재승이형꺼
         self.frame = cv2.cvtColor(self.ip_camera.get_first_frame(), cv2.COLOR_BGR2GRAY)
         # textBrowser 이벤트 처리
         self.write_log('감지 시작')
