@@ -374,7 +374,6 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         try:
             self.motionDetector.ip_camera.end()
         except:
-            print("local")
             pass
 
         if rasp:
