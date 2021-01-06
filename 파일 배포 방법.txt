@@ -1,0 +1,5 @@
+windows
+
+1. anaconda 환경에서 pip install pyinstaller 설치
+2. 코드 상에서 uic 파일 절대 경로로 수정
+3. anaconda 환경에서 pyinstaller -w -F 배포할파일이름.py ( -w -F : 콘솔없이 exe파일만 배포 )
