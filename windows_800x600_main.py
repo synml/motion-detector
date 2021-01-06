@@ -1,16 +1,24 @@
 import multiprocessing as mp
 import sys
 import time
-
+import os
 import cv2
 import numpy as np
-import pygame
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5 import uic
 
-import RPi.GPIO as GPIO
+try:
+    import RPi.GPIO as GPIO
 
-
+    GPIO.setMode(GPIO.BCM)
+    rasp = True
+    #idle = 25
+    alert = 24
+    GPIO.setup(alert, GPIO.OUT)
+except ModuleNotFoundError:
+    rasp = False
+    #idle = 25
+    alert = 24
 
 """
 전역 설정란
@@ -18,15 +26,24 @@ import RPi.GPIO as GPIO
 라벨 크기 : 800(w 너비)  600(h 높이)
 
 """
-idleTime = 10  # second
-threshold = 1.4
+idleTime = 10 # second
+threshold = 1.6
 
 label_w = 800
 label_h = 600
+#
+def resource_path(relative_path):
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
 
-mainUi = uic.loadUiType('main.ui')[0]
-setOptionDialogUi = uic.loadUiType('setOptionDialog.ui')[0]
-infoDialogUi = uic.loadUiType('infoDialog.ui')[0]
+
+mainUI = resource_path(r'C:\Users\hoi\Desktop\motion-detector\main.ui')
+setOptionDialogUI = resource_path(r'C:\Users\hoi\Desktop\motion-detector\setOptionDialog.ui')
+infoDialogUI = resource_path(r'C:\Users\hoi\Desktop\motion-detector\infoDialog.ui')
+
+mainUi = uic.loadUiType(mainUI)[0]
+setOptionDialogUi = uic.loadUiType(setOptionDialogUI)[0]
+infoDialogUi = uic.loadUiType(os.path.abspath(infoDialogUI))[0]
 
 
 class IPCamera:
@@ -40,7 +57,6 @@ class IPCamera:
         self.p.daemon = True
         self.p.start()
 
-
     def get_first_frame(self):
         _, frame = cv2.VideoCapture(self.rtsp_url).read()
         return frame
@@ -48,13 +64,10 @@ class IPCamera:
     def end(self):
         # 프로세스 종료 요청
         self.parent_conn.send(2)
-        self.p.close()
 
     def update(self, conn, rtsp_url: str):
         # load cam into separate process
-        print("카메라 로드 중")
         cap = cv2.VideoCapture(rtsp_url)
-        print("카메라 로드 완료")
 
         run = True
         while run:
@@ -74,7 +87,6 @@ class IPCamera:
                 cap.release()
                 run = False
 
-        print("Camera Connection Closed")
         conn.close()
 
     def get_frame(self, resize=None):
@@ -92,11 +104,11 @@ class IPCamera:
         if resize is None:
             return frame
         else:
-            print("리사이즈")
             return cv2.resize(frame, None, fx=resize, fy=resize)
 
-    def close(self):
-        self.p.close()
+def setUrl(cameraProtocol, cameraID, cameraPassword, cameraIP, cameraPort, cameraProfileName):
+    return  cameraProtocol + '://' + cameraID + ':' \
+    + cameraPassword + '@' + cameraIP + ':' + cameraPort + '/' + cameraProfileName + '/media.smp'
 
 
 class MotionDetector(QtCore.QObject):
@@ -104,17 +116,20 @@ class MotionDetector(QtCore.QObject):
 
     def __init__(self, label, textBrowser):
         super(MotionDetector, self).__init__()
-        # self.camera = cv2.VideoCapture(0)
-        # self.firstCamera = cv2.VideoCapture('rtsp://admin:1q2w3e4r5t@192.168.0.2:554/fhd/media.smp')
-        # self.camera = camera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/fhd/media.smp') #연구실꺼 4
 
-        self.ip_camera = IPCamera('rtsp://admin:1q2w3e4r5t@192.168.0.4:554/test/media.smp')  # 재승이형꺼
+        self.cameraProtocol = 'rtsp'
+        self.cameraID = 'admin'
+        self.cameraPassword = '1q2w3e4r5t'
+        self.cameraIP = '192.168.0.4'
+        self.cameraPort = '554'
+        self.cameraProfileName = 'test'
 
         self.label = label
         self.textBrowser = textBrowser
         self.label.resize(label_w, label_h)
         self.logic = True  # 반복 루프 제어
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
+        self.loopFlag = False
         self.buffer_frame = None
         #self.total_frame = 0
         self.buffError = None  # 이전 프레임 기준 오차율
@@ -124,14 +139,6 @@ class MotionDetector(QtCore.QObject):
         self.threshold = threshold
         self.fps = 1
 
-        # 첫 프레임 gui 라벨 이미지 설정
-        self.frame = cv2.cvtColor(self.ip_camera.get_first_frame(), cv2.COLOR_BGR2GRAY)
-        self.firstFrame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
-
-        # qimg = QtGui.QImage(self.firstFrame.data, self.firstFrame.shape[1], self.firstFrame.shape[0],
-        #                     self.firstFrame.strides[0], QtGui.QImage.Format_Grayscale8)
-        # pixmap = QtGui.QPixmap.fromImage(qimg)
-        # self.label.setPixmap(pixmap)
 
     def onMouse(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -161,11 +168,17 @@ class MotionDetector(QtCore.QObject):
                                 + str(now.tm_min) + "분 " + str(now.tm_sec) + "초")
 
     def loop(self):
-        now = time.localtime()
+        if self.loopFlag:return
+        self.loopFlag = True
+
+        self.ip_camera = IPCamera(setUrl(self.cameraProtocol, self.cameraID, self.cameraPassword,
+                                         self.cameraIP, self.cameraPort, self.cameraProfileName))
+        self.frame = cv2.cvtColor(self.ip_camera.get_first_frame(), cv2.COLOR_BGR2GRAY)
+        self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
+
         # textBrowser 이벤트 처리
         self.write_log('감지 시작')
         # ROI 처리
-        print("frame", self.frame.shape)
         if self.default_x == -1:
             self.setRoI(self.frame)
 
@@ -173,11 +186,11 @@ class MotionDetector(QtCore.QObject):
         if self.buffer_frame is None:  # 첫 프레임인 경우에
             self.frame = self.ip_camera.get_frame()
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+            self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
             self.buffer_frame = self.frame[self.default_y:self.default_y + self.h,
                                 self.default_x:self.default_x + self.w]
             subtract_frame = np.round(
                 np.sqrt(np.sum(np.abs(self.buffer_frame - self.buffer_frame) ** 2)))  # L2 DISTANCE
-            print(subtract_frame)
             self.buffError = subtract_frame
             # 수정사항 -----------------
             bounding_box_frame = self.frame.copy()
@@ -185,7 +198,6 @@ class MotionDetector(QtCore.QObject):
             output_frame = cv2.rectangle(bounding_box_frame, (self.default_x, self.default_y),
                                          (self.default_x + self.w, self.default_y + self.h), (0, 255, 0),
                                          thickness=5)
-            output_frame = cv2.resize(output_frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
 
             qimg = QtGui.QImage(output_frame.data, label_w, label_h,
                                 output_frame.strides[0], QtGui.QImage.Format_Grayscale8)
@@ -196,6 +208,7 @@ class MotionDetector(QtCore.QObject):
 
         self.frame = self.ip_camera.get_frame()
         self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+
         self.roi_frame = self.frame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
         subtract_frame = np.round(np.sqrt(np.sum(np.abs(self.buffer_frame - self.roi_frame) ** 2)))
 
@@ -209,6 +222,7 @@ class MotionDetector(QtCore.QObject):
         qimg = QtGui.QImage(output_frame.data, label_w, label_h,
                             output_frame.strides[0], QtGui.QImage.Format_Grayscale8)
         pixmap = QtGui.QPixmap.fromImage(qimg)
+
         self.label.setPixmap(pixmap)
 
         previous_time = time.time()
@@ -216,13 +230,12 @@ class MotionDetector(QtCore.QObject):
         while self.logic:
             self.frame = self.ip_camera.get_frame()
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+            self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
             current_time = time.time() - previous_time
 
             if current_time > 1. / self.fps:
                 previous_time = time.time()
-                #self.total_frame += 1
 
-                # self.frame = cv2.resize(self.frame, dsize=(800, 600), interpolation=cv2.INTER_AREA)
 
                 if self.buffer_frame is None:  # 첫 프레임인 경우에
                     self.buffer_frame = self.frame[self.default_y:self.default_y + self.h,
@@ -230,24 +243,18 @@ class MotionDetector(QtCore.QObject):
 
                 self.roi_frame = self.frame[self.default_y:self.default_y + self.h,
                                  self.default_x:self.default_x + self.w]
-                print(self.roi_frame.shape)
+
 
                 subtract_frame = np.round(
                     np.sqrt(np.sum(np.abs(self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
-                # subtract_frame = np.round(np.sqrt(np.sum((self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
-                print(subtract_frame)
 
                 if self.buffError is None:
                     self.buffError = subtract_frame
 
                 # 유휴 상태
                 if self.idleMode:
-                    # print("유휴")
                     win.statusLabel.setText("유휴 상태")
                     win.idleTimeLcd.display((self.idleInitTime + self.idleTime) - time.time())
-                    # self.discount += 1
-
-                    # print("유휴상태 현재시간", time.time())
 
                     if self.idleInitTime + self.idleTime <= time.time():
                         self.idleMode = False  # 유휴상태 해제
@@ -255,29 +262,24 @@ class MotionDetector(QtCore.QObject):
 
                 # 일반 감지 모드
                 else:
-                    # print("일반감지모드")
                     self.idleInitTime = time.time()
                     win.statusLabel.setText("일반 감지 상태")
                     win.idleTimeLcd.display(0)
 
-                    # threshold = self.buffError * self.threshold
+                    if subtract_frame > self.buffError * self.threshold:
+                        if rasp:
+                            GPIO.output(alert, GPIO.HIGH)
 
-                    if subtract_frame > self.buffError * self.threshold:# and self.total_frame >= 3:
-                        GPIO.output(alert, GPIO.HIGH)
-                        pygame.mixer.music.play()
-                        # self.buffer_frame = roi_frame
-
-                        # textBrowser에 로그 기록
                         self.write_log('이상 감지')
                         self.idleMode = True
 
-                        # print("진입시간",self.idleInitTime)
+
                     else:
-                        GPIO.output(alert, GPIO.LOW)
+                        if rasp:
+                            GPIO.output(alert, GPIO.LOW)
 
+                self.buffer_frame = self.roi_frame
 
-                self.buffer_frame = self.roi_frame  # 손실 계산을 위해 현재 프레임을 버퍼에 넣고 다음 루프 때 비교
-                # 이전 오차값과 현재 오차값이 +-5% 이상이면 모션 감지
                 self.buffError = subtract_frame
             bounding_box_frame = self.frame.copy()
 
@@ -291,9 +293,6 @@ class MotionDetector(QtCore.QObject):
             pixmap = QtGui.QPixmap.fromImage(qimg)
             self.label.setPixmap(pixmap)
 
-            # loop = QtCore.QEventLoop()
-            # QtCore.QTimer.singleShot(33, loop.quit)  # 이벤트 루트 간격
-            # loop.exec_()
 
 
 class InfoDialog(QtWidgets.QDialog, infoDialogUi):
@@ -307,6 +306,17 @@ class SetOptionDialog(QtWidgets.QDialog, setOptionDialogUi):
         super(SetOptionDialog, self).__init__()
         self.setupUi(self)
 
+        self.cameraID.setText(str('admin'))
+        self.cameraPW.setText(str('1q2w3e4r5t'))
+        self.cameraIP.setText(str('192.168.0.4'))
+        self.cameraProfile.setText(str('test'))
+
+        self.cameraID.textChanged.connect(self.cameraidValueChanged)
+        self.cameraPW.textChanged.connect(self.camerapwValueChanged)
+        self.cameraIP.textChanged.connect(self.cameraipValueChanged)
+        self.cameraProfile.textChanged.connect(self.cameraprofileValueChanged)
+
+
         self.idleTimeSpinBox.setValue(idleTime)
         self.thresholdSlider.setSliderPosition(int((threshold - 1) / 0.05) + 1)
         self.thresholdLCD.display((threshold - 1) / 0.05)
@@ -314,6 +324,18 @@ class SetOptionDialog(QtWidgets.QDialog, setOptionDialogUi):
         self.idleTimeSpinBox.valueChanged.connect(self.idleTimeValueChanged)
         self.thresholdSlider.valueChanged.connect(self.thresholdValueChanged)
         self.fpsSlider.valueChanged.connect(self.fpsValueChanged)
+
+    def cameraidValueChanged(self):
+        win.motionDetector.cameraID = self.cameraID.text()
+
+    def camerapwValueChanged(self):
+        win.motionDetector.cameraPassword = self.cameraPW.text()
+
+    def cameraipValueChanged(self):
+        win.motionDetector.cameraIP = self.cameraIP.text()
+
+    def cameraprofileValueChanged(self):
+        win.motionDetector.cameraProfileName = self.cameraProfile.text()
 
     def idleTimeValueChanged(self):
         win.motionDetector.idleTime = self.idleTimeSpinBox.value()
@@ -333,12 +355,14 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.setupUi(self)
 
         self.thread = QtCore.QThread()
+        self.thread2 = QtCore.QThread()
         self.thread.start()
+        self.thread2.start()
 
         self.motionDetector = MotionDetector(self.label, self.textBrowser)
         self.motionDetector.moveToThread(self.thread)
         self.setOptionDialog = SetOptionDialog()
-        self.setOptionDialog.moveToThread(self.thread)
+        self.setOptionDialog.moveToThread(self.thread2)
         self.infoDialog = InfoDialog()
 
         self.startButton.clicked.connect(self.motionDetector.loop)
@@ -350,9 +374,14 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
     def quit(self):
         self.motionDetector.logic = False  # 메인로직 반복 종료
-        self.motionDetector.ip_camera.end()
-        pygame.mixer.quit()
-        pygame.quit()
+        try:
+            self.motionDetector.ip_camera.end()
+        except:
+            print("local")
+            pass
+
+        if rasp:
+            GPIO.cleanup()
         app.instance().quit()
         app.quit()
         win.thread.exit()
@@ -361,14 +390,7 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
 
 
 if __name__ == "__main__":
-    GPIO.setMode(GPIO.BCM)
-    # idle = 25
-    alert = 24
-    GPIO.setup(alert, GPIO.OUT)
-    pygame.init()
-    pygame.mixer.init()
-    pygame.mixer.music.load("res/alert.mp3")
-
+    mp.freeze_support() # for windows
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     app = QtWidgets.QApplication(sys.argv)
     win = MainWindow()
