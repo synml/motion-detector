@@ -51,7 +51,10 @@ infoDialogUi = uic.loadUiType(os.path.abspath(infoDialogUI))[0]
 
 class IPCamera:
     def __init__(self, rtsp_url: str):
+
         # 데이터 프로세스 전송 파이프
+
+
         self.rtsp_url = rtsp_url
         self.parent_conn, child_conn = mp.Pipe()
         # load process
@@ -59,6 +62,7 @@ class IPCamera:
         # start process
         self.p.daemon = True
         self.p.start()
+
 
     def get_first_frame(self):
         _, frame = cv2.VideoCapture(self.rtsp_url).read()
@@ -85,6 +89,13 @@ class IPCamera:
                 ret, frame = cap.read()
                 conn.send(frame)
 
+            elif rec_dat == 3:
+                print("gpio 출력")
+
+
+
+
+
             elif rec_dat == 2:
                 # 요청이 없는 경우
                 cap.release()
@@ -92,22 +103,31 @@ class IPCamera:
 
         conn.close()
 
-    def get_frame(self, resize=None):
+
+
+    def get_frame(self, mode):
         # 카메라 연결 프로세스에서 프레임 수신하는데 사용
         # resize 값 50% 증가인 경우 1.5
+        if mode == "capture":
+            # send request
+            self.parent_conn.send(1)
+            frame = self.parent_conn.recv()
 
-        # send request
-        self.parent_conn.send(1)
-        frame = self.parent_conn.recv()
 
-        # reset request
-        self.parent_conn.send(0)
+            # reset request
+            self.parent_conn.send(0)
 
-        # resize if needed
-        if resize is None:
             return frame
-        else:
-            return cv2.resize(frame, None, fx=resize, fy=resize)
+
+            # resize if needed
+        elif mode == "signal":
+            self.parent_conn.send(3)
+            
+
+            # reset request
+            self.parent_conn.send(0)
+
+
 
 
 def setUrl(cameraProtocol, cameraID, cameraPassword, cameraIP, cameraPort, cameraProfileName):
@@ -187,7 +207,7 @@ class MotionDetector(QtCore.QObject):
 
         #첫 프레임 로드 받은 후 연산 처리 작업
         if self.buffer_frame is None:  # 첫 프레임인 경우에
-            self.frame = self.ip_camera.get_frame()
+            self.frame = self.ip_camera.get_frame("capture")
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             self.buffer_frame = self.frame[self.default_y:self.default_y + self.h,
                                 self.default_x:self.default_x + self.w]
@@ -208,7 +228,7 @@ class MotionDetector(QtCore.QObject):
 
         # 두 번째 프레임 처리
 
-        self.frame = self.ip_camera.get_frame()
+        self.frame = self.ip_camera.get_frame("capture")
         self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
 
         self.roi_frame = self.frame[self.default_y:self.default_y + self.h, self.default_x:self.default_x + self.w]
@@ -229,8 +249,10 @@ class MotionDetector(QtCore.QObject):
 
         previous_time = time.time()
 
+
+
         while self.logic:
-            self.frame = self.ip_camera.get_frame()
+            self.frame = self.ip_camera.get_frame("capture")
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             current_time = time.time() - previous_time
 
@@ -255,38 +277,29 @@ class MotionDetector(QtCore.QObject):
                 if self.buffError is None:
                     self.buffError = subtract_frame
 
-                # 유휴 상태
-                if self.idleMode:
-                    win.statusLabel.setText("유휴 상태")
-                    win.idleTimeLcd.display((self.idleInitTime + self.idleTime) - time.time())
-
-                    if self.idleInitTime + self.idleTime <= time.time():
-                        self.idleMode = False  # 유휴상태 해제
-                        # self.discount = 0
-                        if rasp:
-                            GPIO.output(alert, GPIO.LOW)
-
-                # 일반 감지 모드
-                else:
-                    self.idleInitTime = time.time()
-                    win.statusLabel.setText("일반 감지 상태")
-                    win.idleTimeLcd.display(0)
-
+                # 일반 감지 상태
+                if self.idleMode == False:
                     if subtract_frame > self.buffError * self.threshold:
-                        if rasp:
-                            GPIO.output(alert, GPIO.HIGH)
-
-
                         self.write_log('이상 감지')
                         self.idleMode = True
+                        self.idleInitTime = time.time()
+                        self.ip_camera.get_frame("signal")
 
+                if self.idleMode == True:
+                        win.statusLabel.setText("유휴 상태")
+                        win.idleTimeLcd.display(
+                            (self.idleInitTime + self.idleTime) - time.time())
 
+                        if self.idleInitTime + self.idleTime <= time.time():
+                            self.idleMode = False  # 유휴상태 해제
 
-
+                            win.statusLabel.setText("일반 감지 상태")
+                            win.idleTimeLcd.display(0)
 
                 self.buffer_frame = self.roi_frame
 
                 self.buffError = subtract_frame
+
             bounding_box_frame = self.frame.copy()
 
             bounding_box_frame = cv2.rectangle(bounding_box_frame, (self.default_x, self.default_y),
@@ -365,6 +378,8 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         self.thread.start()
         self.thread2.start()
 
+
+
         self.motionDetector = MotionDetector(self.label, self.textBrowser)
         self.motionDetector.moveToThread(self.thread)
         self.setOptionDialog = SetOptionDialog()
@@ -401,3 +416,4 @@ if __name__ == "__main__":
     win = MainWindow()
     win.show()
     app.exec_()
+
