@@ -7,6 +7,18 @@ import numpy as np
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5 import uic
 
+try:
+    import RPi.GPIO as GPIO
+
+    GPIO.setMode(GPIO.BCM)
+    rasp = True
+    #idle = 25
+    alert = 24
+    GPIO.setup(alert, GPIO.OUT)
+except ModuleNotFoundError:
+    rasp = False
+    #idle = 25
+    alert = 24
 
 """
 전역 설정란
@@ -187,10 +199,11 @@ class MotionDetector(QtCore.QObject):
 
         # 평균 로스 계산
         self.threshold = 1 + round((((int(self.avgLoss)/self.lossCycle)/self.roi_frame.size)*100),2)
+        print("임계값", self.threshold)
 
-        win.statusLabel.setText("일반 감지 상태")
+
+
         previous_time = time.time()
-
         while self.logic:
             self.frame = self.ip_camera.get_frame("capture")
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
@@ -210,6 +223,9 @@ class MotionDetector(QtCore.QObject):
 
                 subtract_frame = np.round(
                     np.sqrt(np.sum(np.abs(self.buffer_frame - self.roi_frame) ** 2)))  # L2 DISTANCE
+
+                # test
+                print(subtract_frame, self.roi_frame.size)
 
                 if self.buffError is None:
                     self.buffError = subtract_frame
@@ -329,7 +345,6 @@ class IPCamera():
             # reset request
             self.parent_conn.send(0)
 
-
 class InfoDialog(QtWidgets.QDialog, infoDialogUi):
     def __init__(self):
         super(InfoDialog, self).__init__()
@@ -414,6 +429,8 @@ class MainWindow(QtWidgets.QMainWindow, mainUi):
         except:
             pass
 
+        if rasp:
+            GPIO.cleanup()
         app.instance().quit()
         app.quit()
         win.thread.exit()
