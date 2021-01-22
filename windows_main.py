@@ -19,16 +19,15 @@ threshold = 1.6
 label_w = 800
 label_h = 600
 
-
 #
 def resource_path(relative_path):
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
 
-
-mainUI = resource_path(r'C:\code\windows\main.ui')
-setOptionDialogUI = resource_path(r'C:\code\windows\setOptionDialog.ui')
-infoDialogUI = resource_path(r'C:\code\windows\infoDialog.ui')
+#(r'C:\code\windows\setOptionDialog.ui')
+mainUI = resource_path('main.ui')
+setOptionDialogUI = resource_path('setOptionDialog.ui')
+infoDialogUI = resource_path('infoDialog.ui')
 
 mainUi = uic.loadUiType(mainUI)[0]
 setOptionDialogUi = uic.loadUiType(setOptionDialogUI)[0]
@@ -47,6 +46,9 @@ class IPCamera:
         # start process
         self.p.daemon = True
         self.p.start()
+
+    def __call__(self, *args, **kwargs):
+        return mp.freeze_support
 
     def get_first_frame(self):
         _, frame = cv2.VideoCapture(self.rtsp_url).read()
@@ -114,20 +116,19 @@ def setUrl(cameraProtocol, cameraID, cameraPassword, cameraIP, cameraPort, camer
 
 
 class MotionDetector(QtCore.QObject):
-    idleTime = 5
 
     def __init__(self, label, textBrowser):
         super(MotionDetector, self).__init__()
-
         self.cameraProtocol = 'rtsp'
         self.cameraID = 'admin'
         self.cameraPassword = '1q2w3e4r5t'
-        self.cameraIP = '192.168.0.4'
+        self.cameraIP = '192.168.0.100'
         self.cameraPort = '554'
         self.cameraProfileName = 'test'
 
         self.label = label
         self.textBrowser = textBrowser
+
         self.label.resize(label_w, label_h)
         self.logic = True  # 반복 루프 제어
         self.default_x, self.default_y, self.w, self.h = -1, -1, -1, -1
@@ -163,6 +164,7 @@ class MotionDetector(QtCore.QObject):
         cv2.setMouseCallback("Set RoI", self.onMouse, param=frame)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+
 
     def write_log(self, message: str):
         now = time.localtime()
@@ -249,12 +251,15 @@ class MotionDetector(QtCore.QObject):
             self.label.setPixmap(pixmap)
 
         # 평균 로스 계산
-        self.threshold = 1 + round((((int(self.avgLoss) / self.lossCycle) / self.roi_frame.size) * 100), 2)
+        self.threshold = round(1 + round((((int(self.avgLoss) / self.lossCycle) / self.roi_frame.size) * 100), 2),1)
 
+        # self.thresholdLabel.append(str(self.threshold))
+        #win.thresholdLabel.append(str(self.threshold))
         win.statusLabel.setText("일반 감지 상태")
         previous_time = time.time()
 
         while self.logic:
+            win.threshold.setText("임계값 :  "+str(self.threshold))
             self.frame = self.ip_camera.get_frame("capture")
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             current_time = time.time() - previous_time
@@ -358,6 +363,7 @@ class SetOptionDialog(QtWidgets.QDialog, setOptionDialogUi):
 
     def thresholdValueChanged(self):
         win.motionDetector.threshold = 1 + (0.05 * self.thresholdSlider.value())
+
         self.thresholdLCD.display(self.thresholdSlider.value())
 
     def fpsValueChanged(self):
@@ -407,7 +413,7 @@ if __name__ == "__main__":
     mp.freeze_support()  # for windows
     pygame.init()
     pygame.mixer.init()
-    pygame.mixer.music.load(r'C:\code\windows\alert.mp3')
+    pygame.mixer.music.load(r"res/alert.mp3")
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     app = QtWidgets.QApplication(sys.argv)
     win = MainWindow()
