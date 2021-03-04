@@ -40,7 +40,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>시작</string>
+     <string>Start</string>
     </property>
    </widget>
    <widget class="QLabel" name="label">
@@ -91,7 +91,7 @@ color: rgb(255, 255, 255);</string>
      </rect>
     </property>
     <property name="text">
-     <string>종료</string>
+     <string>Exit</string>
     </property>
    </widget>
    <widget class="QPushButton" name="setOptionButton">
@@ -104,7 +104,7 @@ color: rgb(255, 255, 255);</string>
      </rect>
     </property>
     <property name="text">
-     <string>옵션 설정</string>
+     <string>Option</string>
     </property>
    </widget>
    <widget class="QLCDNumber" name="idleTimeLcd">
@@ -137,57 +137,12 @@ color: rgb(255, 255, 255);</string>
      </font>
     </property>
     <property name="text">
-     <string>대기</string>
+     <string>Wait..</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
     </property>
    </widget>
-   <widget class="QLabel" name="threshold">
-    <property name="geometry">
-     <rect>
-      <x>1100</x>
-      <y>580</y>
-      <width>111</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>임계값 :</string>
-    </property>
-   </widget>
-  </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1230</width>
-     <height>26</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuFile">
-    <property name="title">
-     <string>파일(F)</string>
-    </property>
-    <addaction name="actionStart"/>
-    <addaction name="actionQuit"/>
-   </widget>
-   <widget class="QMenu" name="menuSetting">
-    <property name="title">
-     <string>설정(S)</string>
-    </property>
-    <addaction name="actionSetOption"/>
-   </widget>
-   <widget class="QMenu" name="menuHelp">
-    <property name="title">
-     <string>도움말(H)</string>
-    </property>
-    <addaction name="actionInfo"/>
-   </widget>
-   <addaction name="menuFile"/>
-   <addaction name="menuSetting"/>
-   <addaction name="menuHelp"/>
   </widget>
   <action name="actionQuit">
    <property name="icon">
