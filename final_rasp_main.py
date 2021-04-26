@@ -163,9 +163,9 @@ class MotionDetector(QtCore.QObject):
 
     def write_log(self, message: str):
         now = time.localtime()
-        self.textBrowser.append(message + ': ' + str(now.tm_year) + "년 " + str(now.tm_mon) + "월 "
-                                + str(now.tm_mday) + "일 " + str(now.tm_hour) + "시 "
-                                + str(now.tm_min) + "분 " + str(now.tm_sec) + "초")
+        self.textBrowser.append(message + ': ' + str(now.tm_year) + " Y " + str(now.tm_mon) + " M "
+                                + str(now.tm_mday) + " D " + str(now.tm_hour) + " H "
+                                + str(now.tm_min) + " M " + str(now.tm_sec) + " S ")
 
     def loop(self):
         if self.loopFlag: return
@@ -176,7 +176,7 @@ class MotionDetector(QtCore.QObject):
         self.frame = cv2.cvtColor(self.ip_camera.get_first_frame(), cv2.COLOR_BGR2GRAY)
 
         # textBrowser 이벤트 처리
-        self.write_log('감지 시작')
+        self.write_log('Start')
         # ROI 처리
         if self.default_x == -1:
             self.setRoI(self.frame)
@@ -248,7 +248,7 @@ class MotionDetector(QtCore.QObject):
         # 평균 로스 계산
         self.threshold = 1 + round((((int(self.avgLoss) / self.lossCycle) / self.roi_frame.size) * 100), 2)
 
-        win.statusLabel.setText("일반 감지 상태")
+        win.statusLabel.setText("normal")
         previous_time = time.time()
 
         while self.logic:
@@ -275,20 +275,20 @@ class MotionDetector(QtCore.QObject):
                 # 일반 감지 상태
                 if self.idleMode == False:
                     if subtract_frame > self.buffError * self.threshold:
-                        self.write_log('이상 감지')
+                        self.write_log('Anomaly detected')
                         self.idleMode = True
                         self.idleInitTime = time.time()
                         self.ip_camera.get_frame("signal")
 
                 if self.idleMode == True:
-                    win.statusLabel.setText("유휴 상태")
+                    win.statusLabel.setText("Idle state")
                     win.idleTimeLcd.display(
                         (self.idleInitTime + self.idleTime) - time.time())
 
                     if self.idleInitTime + self.idleTime <= time.time():
                         self.idleMode = False  # 유휴상태 해제
 
-                        win.statusLabel.setText("일반 감지 상태")
+                        win.statusLabel.setText("Anomaly detected")
                         win.idleTimeLcd.display(0)
 
                 self.buffer_frame = self.roi_frame
